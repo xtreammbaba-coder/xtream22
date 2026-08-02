@@ -641,7 +641,7 @@
                     <button id="clearFormBtn">🗑️ Temizle</button>
                 </div>
                 <div style="margin-top:12px;font-size:0.85rem;opacity:0.6;">
-                    <span id="licenseStatus">🔒 Lisans: Kontrol ediliyor...</span>
+                    <span id="licenseStatus">✅ Lisans: Geçerli</span>
                 </div>
             </div>
 
@@ -723,14 +723,14 @@
                 isPlaying: false,
                 hlsInstance: null,
                 isLightTheme: false,
-                licenseValid: false,
+                licenseValid: true,
                 deviceId: null,
                 apiCache: {},
                 sidebarOpen: false,
                 searchQuery: '',
                 allItems: [],
                 currentPage: 0,
-                pageSize: 50,
+                pageSize: 30,
                 isLoadingMore: false,
                 allItemsLoaded: false
             };
@@ -785,12 +785,16 @@
             }
 
             function getDeviceId() {
-                var id = localStorage.getItem('iptv_device_id');
-                if (!id) {
-                    id = 'DEV_' + generateId();
-                    localStorage.setItem('iptv_device_id', id);
+                try {
+                    var id = localStorage.getItem('iptv_device_id');
+                    if (!id) {
+                        id = 'DEV_' + generateId();
+                        localStorage.setItem('iptv_device_id', id);
+                    }
+                    return id;
+                } catch (e) {
+                    return 'DEV_' + generateId();
                 }
-                return id;
             }
 
             function formatTime(seconds) {
@@ -854,37 +858,12 @@
             }
 
             // =============================================================
-            // LICENSE SYSTEM
+            // LICENSE SYSTEM - BASIT VE HATASIZ
             // =============================================================
             function checkLicense() {
-                var stored = localStorage.getItem('iptv_license');
-                var now = Date.now();
-                var deviceId = getDeviceId();
-
-                if (stored) {
-                    var data = safeParseJSON(stored);
-                    if (data && data.deviceId === deviceId) {
-                        var expiry = data.expiry || 0;
-                        if (expiry > now) {
-                            STATE.licenseValid = true;
-                            dom.licenseStatus.textContent = '🔓 Lisans: Geçerli (' + new Date(expiry)
-                                .toLocaleDateString() + ')';
-                            return true;
-                        }
-                    }
-                }
-
-                var trialDays = 7;
-                var trialExpiry = now + (trialDays * 24 * 60 * 60 * 1000);
-                var licenseData = {
-                    deviceId: deviceId,
-                    expiry: trialExpiry,
-                    trial: true
-                };
-                localStorage.setItem('iptv_license', JSON.stringify(licenseData));
+                // Lisans kontrolünü basitleştir - her zaman geçerli say
                 STATE.licenseValid = true;
-                dom.licenseStatus.textContent = '🔓 Deneme süresi: ' + trialDays + ' gün (' + new Date(trialExpiry)
-                    .toLocaleDateString() + ')';
+                dom.licenseStatus.textContent = '✅ Lisans: Geçerli';
                 return true;
             }
 
@@ -892,13 +871,21 @@
             // ACCOUNT MANAGEMENT (CRUD)
             // =============================================================
             function loadAccounts() {
-                var data = localStorage.getItem('iptv_accounts');
-                STATE.accounts = data ? safeParseJSON(data) || [] : [];
+                try {
+                    var data = localStorage.getItem('iptv_accounts');
+                    STATE.accounts = data ? safeParseJSON(data) || [] : [];
+                } catch (e) {
+                    STATE.accounts = [];
+                }
                 renderAccountList();
             }
 
             function saveAccounts() {
-                localStorage.setItem('iptv_accounts', JSON.stringify(STATE.accounts));
+                try {
+                    localStorage.setItem('iptv_accounts', JSON.stringify(STATE.accounts));
+                } catch (e) {
+                    showToast('Hesap kaydedilemedi', 'error');
+                }
                 renderAccountList();
             }
 
@@ -1075,13 +1062,12 @@
                                 callback('Geçersiz JSON yanıtı', null);
                             }
                         } else if (xhr.status === 0) {
-                            // Network error - retry
                             if (retryCount < maxRetries) {
                                 setTimeout(function() {
                                     apiRequest(url, callback, retryCount + 1);
                                 }, 2000 * (retryCount + 1));
                             } else {
-                                callback('Ağ bağlantısı başarısız. Lütfen sunucu adresini kontrol edin.', null);
+                                callback('Ağ bağlantısı başarısız. Sunucu adresini kontrol edin.', null);
                             }
                         } else {
                             callback('HTTP ' + xhr.status + ': ' + xhr.statusText, null);
@@ -1192,41 +1178,10 @@
             }
 
             function getStreamUrl(account, type, streamId, callback) {
-                var action = '';
-                var params = {};
-                if (type === 'live') {
-                    action = 'get_live_stream';
-                    params.stream_id = streamId;
-                } else if (type === 'vod') {
-                    action = 'get_vod_stream';
-                    params.vod_id = streamId;
-                } else if (type === 'series') {
-                    action = 'get_series_stream';
-                    params.series_id = streamId;
-                }
-                var url = buildApiUrl(account, action, params);
-                apiRequest(url, function(err, data) {
-                    if (err) {
-                        // Fallback: construct URL
-                        var base = account.serverUrl.replace(/\/player_api\.php.*$/, '');
-                        var streamUrl = base + '/live/' + encodeURIComponent(account.username) + '/' +
-                            encodeURIComponent(account.password) + '/' + streamId + '.m3u8';
-                        callback(null, streamUrl);
-                        return;
-                    }
-                    if (data && data.url) {
-                        callback(null, data.url);
-                    } else if (data && data.stream_url) {
-                        callback(null, data.stream_url);
-                    } else if (data && data.stream_info && data.stream_info.url) {
-                        callback(null, data.stream_info.url);
-                    } else {
-                        var base2 = account.serverUrl.replace(/\/player_api\.php.*$/, '');
-                        var streamUrl2 = base2 + '/live/' + encodeURIComponent(account.username) + '/' +
-                            encodeURIComponent(account.password) + '/' + streamId + '.m3u8';
-                        callback(null, streamUrl2);
-                    }
-                });
+                var base = account.serverUrl.replace(/\/player_api\.php.*$/, '');
+                var streamUrl = base + '/live/' + encodeURIComponent(account.username) + '/' +
+                    encodeURIComponent(account.password) + '/' + streamId + '.m3u8';
+                callback(null, streamUrl);
             }
 
             // =============================================================
@@ -1236,11 +1191,6 @@
                 var account = findAccount(id);
                 if (!account) {
                     showToast('Hesap bulunamadı.', 'error');
-                    return;
-                }
-
-                if (!STATE.licenseValid) {
-                    showToast('Lisans geçersiz.', 'error');
                     return;
                 }
 
@@ -1380,7 +1330,7 @@
             }
 
             // =============================================================
-            // PAGINATED RENDER
+            // PAGINATED RENDER - 30'AR KANAL YÜKLER
             // =============================================================
             function renderItemsPaginated() {
                 var items = STATE.allItems;
@@ -1476,6 +1426,9 @@
                 }
             }
 
+            // =============================================================
+            // INFINITE SCROLL - KAYDIRINCA DAHA FAZLA KANAL YÜKLER
+            // =============================================================
             function setupInfiniteScroll() {
                 var grid = dom.channelGrid;
                 var scrollHandler = function() {
@@ -1636,7 +1589,9 @@
                     favs.splice(idx, 1);
                     showToast('☆ Favorilerden çıkarıldı.', 'info');
                 }
-                localStorage.setItem('iptv_favorites', JSON.stringify(favs));
+                try {
+                    localStorage.setItem('iptv_favorites', JSON.stringify(favs));
+                } catch (e) {}
                 updateFavoriteButton();
 
                 var cards = dom.channelGrid.querySelectorAll('.channel-card');
@@ -1660,26 +1615,36 @@
             }
 
             function saveWatchHistory(type, id, title) {
-                var history = STATE.watchHistory;
-                var key = type + ':' + id;
-                history[key] = {
-                    title: title,
-                    type: type,
-                    id: id,
-                    timestamp: Date.now(),
-                    position: 0
-                };
-                localStorage.setItem('iptv_watch_history', JSON.stringify(history));
+                try {
+                    var history = STATE.watchHistory;
+                    var key = type + ':' + id;
+                    history[key] = {
+                        title: title,
+                        type: type,
+                        id: id,
+                        timestamp: Date.now(),
+                        position: 0
+                    };
+                    localStorage.setItem('iptv_watch_history', JSON.stringify(history));
+                } catch (e) {}
             }
 
             function loadWatchHistory() {
-                var data = localStorage.getItem('iptv_watch_history');
-                STATE.watchHistory = data ? safeParseJSON(data) || {} : {};
+                try {
+                    var data = localStorage.getItem('iptv_watch_history');
+                    STATE.watchHistory = data ? safeParseJSON(data) || {} : {};
+                } catch (e) {
+                    STATE.watchHistory = {};
+                }
             }
 
             function loadFavorites() {
-                var data = localStorage.getItem('iptv_favorites');
-                STATE.favorites = data ? safeParseJSON(data) || [] : [];
+                try {
+                    var data = localStorage.getItem('iptv_favorites');
+                    STATE.favorites = data ? safeParseJSON(data) || [] : [];
+                } catch (e) {
+                    STATE.favorites = [];
+                }
             }
 
             // =============================================================
@@ -1757,16 +1722,24 @@
                 STATE.isLightTheme = !STATE.isLightTheme;
                 document.body.className = STATE.isLightTheme ? 'light-theme' : '';
                 dom.themeToggle.textContent = STATE.isLightTheme ? '🌙' : '☀️';
-                localStorage.setItem('iptv_theme', STATE.isLightTheme ? 'light' : 'dark');
+                try {
+                    localStorage.setItem('iptv_theme', STATE.isLightTheme ? 'light' : 'dark');
+                } catch (e) {}
             }
 
             function loadTheme() {
-                var theme = localStorage.getItem('iptv_theme');
-                if (theme === 'light') {
-                    STATE.isLightTheme = true;
-                    document.body.className = 'light-theme';
-                    dom.themeToggle.textContent = '🌙';
-                } else {
+                try {
+                    var theme = localStorage.getItem('iptv_theme');
+                    if (theme === 'light') {
+                        STATE.isLightTheme = true;
+                        document.body.className = 'light-theme';
+                        dom.themeToggle.textContent = '🌙';
+                    } else {
+                        STATE.isLightTheme = false;
+                        document.body.className = '';
+                        dom.themeToggle.textContent = '☀️';
+                    }
+                } catch (e) {
                     STATE.isLightTheme = false;
                     document.body.className = '';
                     dom.themeToggle.textContent = '☀️';
@@ -1904,11 +1877,14 @@
             }
 
             // =============================================================
-            // INIT
+            // INIT - LISANS KONTROLÜ BASİTLEŞTİRİLDİ
             // =============================================================
             function init() {
+                // Lisans kontrolü - her zaman geçerli
+                STATE.licenseValid = true;
+                dom.licenseStatus.textContent = '✅ Lisans: Geçerli';
                 STATE.deviceId = getDeviceId();
-                checkLicense();
+
                 loadTheme();
                 loadAccounts();
                 loadFavorites();
@@ -1917,7 +1893,6 @@
 
                 console.log('LG Smart IPTV initialized');
                 console.log('Device ID:', STATE.deviceId);
-                console.log('License:', STATE.licenseValid ? 'Valid' : 'Invalid');
                 console.log('Accounts:', STATE.accounts.length);
 
                 if (STATE.accounts.length === 0) {
