@@ -781,7 +781,7 @@
 
     <script>
         /* ==============================================================
-               LG Smart IPTV - Full Application (ES5)
+               LG Smart IPTV - LG webOS Optimized
                ============================================================== */
 
         (function() {
@@ -795,7 +795,7 @@
                 currentAccountId: null,
                 currentCategory: null,
                 currentItem: null,
-                currentType: 'live', // 'live' | 'vod' | 'series'
+                currentType: 'live',
                 favorites: [],
                 watchHistory: {},
                 isPlaying: false,
@@ -808,7 +808,8 @@
                 apiCache: {},
                 currentStreamUrl: null,
                 sidebarOpen: false,
-                searchQuery: ''
+                searchQuery: '',
+                isInitialized: false
             };
 
             // =============================================================
@@ -865,16 +866,20 @@
             }
 
             function getDeviceId() {
-                var id = localStorage.getItem('iptv_device_id');
-                if (!id) {
-                    id = 'DEV_' + generateId();
-                    localStorage.setItem('iptv_device_id', id);
+                try {
+                    var id = localStorage.getItem('iptv_device_id');
+                    if (!id) {
+                        id = 'DEV_' + generateId();
+                        localStorage.setItem('iptv_device_id', id);
+                    }
+                    return id;
+                } catch (e) {
+                    return 'DEV_' + generateId();
                 }
-                return id;
             }
 
             function formatTime(seconds) {
-                if (!seconds || isNaN(seconds)) return '0:00';
+                if (!seconds || isNaN(seconds) || !isFinite(seconds)) return '0:00';
                 var h = Math.floor(seconds / 3600);
                 var m = Math.floor((seconds % 3600) / 60);
                 var s = Math.floor(seconds % 60);
@@ -885,6 +890,7 @@
             }
 
             function showToast(message, type) {
+                if (!dom.toast) return;
                 type = type || 'info';
                 dom.toast.textContent = message;
                 dom.toast.className = 'toast ' + type + ' show';
@@ -895,12 +901,14 @@
             }
 
             function showLoading(text) {
+                if (!dom.loadingOverlay) return;
                 text = text || 'Yükleniyor...';
                 dom.loadingText.textContent = text;
                 dom.loadingOverlay.className = 'loading-overlay';
             }
 
             function hideLoading() {
+                if (!dom.loadingOverlay) return;
                 dom.loadingOverlay.className = 'loading-overlay hidden';
             }
 
@@ -929,47 +937,62 @@
             }
 
             // =============================================================
-            // 4. LICENSE SYSTEM
+            // 4. LICENSE SYSTEM (LG webOS Compatible)
             // =============================================================
 
             function checkLicense() {
-                var stored = localStorage.getItem('iptv_license');
-                var now = Date.now();
-                var deviceId = getDeviceId();
+                try {
+                    var stored = localStorage.getItem('iptv_license');
+                    var now = Date.now();
+                    var deviceId = getDeviceId();
 
-                if (stored) {
-                    var data = safeParseJSON(stored);
-                    if (data && data.deviceId === deviceId) {
-                        var expiry = data.expiry || 0;
-                        if (expiry > now) {
-                            STATE.licenseValid = true;
-                            STATE.licenseExpiry = expiry;
-                            dom.licenseStatus.textContent = '🔓 Lisans: Geçerli (' + new Date(expiry).toLocaleDateString() +
-                                ')';
-                            return true;
-                        } else {
-                            // expired
-                            STATE.licenseValid = false;
-                            dom.licenseStatus.textContent = '🔒 Lisans: Süresi doldu';
-                            return false;
+                    if (stored) {
+                        var data = safeParseJSON(stored);
+                        if (data && data.deviceId === deviceId) {
+                            var expiry = data.expiry || 0;
+                            if (expiry > now) {
+                                STATE.licenseValid = true;
+                                STATE.licenseExpiry = expiry;
+                                if (dom.licenseStatus) {
+                                    dom.licenseStatus.textContent = '🔓 Lisans: Geçerli (' + new Date(expiry)
+                                        .toLocaleDateString() + ')';
+                                }
+                                return true;
+                            } else {
+                                STATE.licenseValid = false;
+                                if (dom.licenseStatus) {
+                                    dom.licenseStatus.textContent = '🔒 Lisans: Süresi doldu';
+                                }
+                                return false;
+                            }
                         }
                     }
-                }
 
-                // No license or invalid => start trial
-                var trialDays = 7;
-                var trialExpiry = now + (trialDays * 24 * 60 * 60 * 1000);
-                var licenseData = {
-                    deviceId: deviceId,
-                    expiry: trialExpiry,
-                    trial: true
-                };
-                localStorage.setItem('iptv_license', JSON.stringify(licenseData));
-                STATE.licenseValid = true;
-                STATE.licenseExpiry = trialExpiry;
-                dom.licenseStatus.textContent = '🔓 Deneme süresi: ' + trialDays + ' gün (' + new Date(trialExpiry)
-                    .toLocaleDateString() + ')';
-                return true;
+                    // No license or invalid => start trial
+                    var trialDays = 7;
+                    var trialExpiry = now + (trialDays * 24 * 60 * 60 * 1000);
+                    var licenseData = {
+                        deviceId: deviceId,
+                        expiry: trialExpiry,
+                        trial: true
+                    };
+                    localStorage.setItem('iptv_license', JSON.stringify(licenseData));
+                    STATE.licenseValid = true;
+                    STATE.licenseExpiry = trialExpiry;
+                    if (dom.licenseStatus) {
+                        dom.licenseStatus.textContent = '🔓 Deneme süresi: ' + trialDays + ' gün (' + new Date(trialExpiry)
+                            .toLocaleDateString() + ')';
+                    }
+                    return true;
+                } catch (e) {
+                    console.log('License check error:', e);
+                    // Fallback: allow trial
+                    STATE.licenseValid = true;
+                    if (dom.licenseStatus) {
+                        dom.licenseStatus.textContent = '🔓 Deneme sürümü';
+                    }
+                    return true;
+                }
             }
 
             // =============================================================
@@ -977,17 +1000,27 @@
             // =============================================================
 
             function loadAccounts() {
-                var data = localStorage.getItem('iptv_accounts');
-                STATE.accounts = data ? safeParseJSON(data) || [] : [];
-                renderAccountList();
+                try {
+                    var data = localStorage.getItem('iptv_accounts');
+                    STATE.accounts = data ? safeParseJSON(data) || [] : [];
+                    renderAccountList();
+                } catch (e) {
+                    STATE.accounts = [];
+                    renderAccountList();
+                }
             }
 
             function saveAccounts() {
-                localStorage.setItem('iptv_accounts', JSON.stringify(STATE.accounts));
-                renderAccountList();
+                try {
+                    localStorage.setItem('iptv_accounts', JSON.stringify(STATE.accounts));
+                    renderAccountList();
+                } catch (e) {
+                    showToast('Hesap kaydedilemedi: ' + e.message, 'error');
+                }
             }
 
             function renderAccountList() {
+                if (!dom.accountList) return;
                 var list = dom.accountList;
                 if (STATE.accounts.length === 0) {
                     list.innerHTML =
@@ -1018,35 +1051,41 @@
                 list.innerHTML = html;
 
                 // Event delegation for account actions
-                list.querySelectorAll('[data-action]').forEach(function(el) {
-                    el.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        var action = this.getAttribute('data-action');
-                        var id = this.getAttribute('data-id');
-                        if (action === 'connect') {
-                            connectAccount(id);
-                        } else if (action === 'edit') {
-                            editAccount(id);
-                        } else if (action === 'delete') {
-                            deleteAccount(id);
-                        }
-                    });
-                });
+                var items = list.querySelectorAll('[data-action]');
+                for (var j = 0; j < items.length; j++) {
+                    (function(el) {
+                        el.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            var action = this.getAttribute('data-action');
+                            var id = this.getAttribute('data-id');
+                            if (action === 'connect') {
+                                connectAccount(id);
+                            } else if (action === 'edit') {
+                                editAccount(id);
+                            } else if (action === 'delete') {
+                                deleteAccount(id);
+                            }
+                        });
+                    })(items[j]);
+                }
 
                 // Click on account item to select
-                list.querySelectorAll('.account-item').forEach(function(el) {
-                    el.addEventListener('click', function() {
-                        var id = this.getAttribute('data-id');
-                        connectAccount(id);
-                    });
-                    el.addEventListener('keydown', function(e) {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
+                var accItems = list.querySelectorAll('.account-item');
+                for (var k = 0; k < accItems.length; k++) {
+                    (function(el) {
+                        el.addEventListener('click', function() {
                             var id = this.getAttribute('data-id');
                             connectAccount(id);
-                        }
-                    });
-                });
+                        });
+                        el.addEventListener('keydown', function(e) {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                var id = this.getAttribute('data-id');
+                                connectAccount(id);
+                            }
+                        });
+                    })(accItems[k]);
+                }
             }
 
             function escapeHtml(text) {
@@ -1064,7 +1103,6 @@
                     showToast('Lütfen tüm alanları doldurun.', 'error');
                     return null;
                 }
-                // Normalize URL
                 if (!url.match(/^https?:\/\//)) {
                     url = 'http://' + url;
                 }
@@ -1090,12 +1128,10 @@
                 }
 
                 if (existing) {
-                    // Update
                     existing.password = data.password;
                     existing.name = data.name;
                     showToast('Hesap güncellendi.', 'success');
                 } else {
-                    // New
                     data.id = generateId();
                     STATE.accounts.push(data);
                     showToast('Hesap eklendi.', 'success');
@@ -1109,6 +1145,7 @@
                 dom.serverUrl.value = '';
                 dom.username.value = '';
                 dom.password.value = '';
+                dom.serverUrl.focus();
             }
 
             function editAccount(id) {
@@ -1117,8 +1154,7 @@
                 dom.serverUrl.value = acc.serverUrl || '';
                 dom.username.value = acc.username || '';
                 dom.password.value = acc.password || '';
-                // Scroll to form
-                dom.panelScreen.querySelector('.panel-left').scrollIntoView({ behavior: 'smooth' });
+                dom.serverUrl.focus();
             }
 
             function deleteAccount(id) {
@@ -1150,30 +1186,34 @@
             // =============================================================
 
             function apiRequest(url, callback) {
-                var xhr = new XMLHttpRequest();
-                xhr.open('GET', url, true);
-                xhr.timeout = 15000;
-                xhr.onreadystatechange = function() {
-                    if (xhr.readyState === 4) {
-                        if (xhr.status >= 200 && xhr.status < 300) {
-                            var data = safeParseJSON(xhr.responseText);
-                            if (data) {
-                                callback(null, data);
+                try {
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('GET', url, true);
+                    xhr.timeout = 15000;
+                    xhr.onreadystatechange = function() {
+                        if (xhr.readyState === 4) {
+                            if (xhr.status >= 200 && xhr.status < 300) {
+                                var data = safeParseJSON(xhr.responseText);
+                                if (data) {
+                                    callback(null, data);
+                                } else {
+                                    callback('Geçersiz JSON yanıtı', null);
+                                }
                             } else {
-                                callback('Geçersiz JSON yanıtı', null);
+                                callback('HTTP ' + xhr.status + ': ' + xhr.statusText, null);
                             }
-                        } else {
-                            callback('HTTP ' + xhr.status + ': ' + xhr.statusText, null);
                         }
-                    }
-                };
-                xhr.ontimeout = function() {
-                    callback('Bağlantı zaman aşımına uğradı.', null);
-                };
-                xhr.onerror = function() {
-                    callback('Ağ hatası oluştu.', null);
-                };
-                xhr.send();
+                    };
+                    xhr.ontimeout = function() {
+                        callback('Bağlantı zaman aşımına uğradı.', null);
+                    };
+                    xhr.onerror = function() {
+                        callback('Ağ hatası oluştu.', null);
+                    };
+                    xhr.send();
+                } catch (e) {
+                    callback('İstek gönderilemedi: ' + e.message, null);
+                }
             }
 
             function buildApiUrl(account, action, params) {
@@ -1203,6 +1243,9 @@
                     }
                     if (data && data.user_info) {
                         callback(null, data);
+                    } else if (data && data.user_info === undefined && data.length !== undefined) {
+                        // Some servers return array directly
+                        callback(null, { user_info: { username: account.username } });
                     } else {
                         callback('Geçersiz kimlik bilgileri veya sunucu yanıtı.', null);
                     }
@@ -1271,10 +1314,13 @@
                 var url = buildApiUrl(account, action, params);
                 apiRequest(url, function(err, data) {
                     if (err) {
-                        callback(err, null);
+                        // Fallback: construct URL directly
+                        var base = account.serverUrl.replace(/\/player_api\.php.*$/, '');
+                        var streamUrl = base + '/live/' + encodeURIComponent(account.username) + '/' +
+                            encodeURIComponent(account.password) + '/' + streamId + '.m3u8';
+                        callback(null, streamUrl);
                         return;
                     }
-                    // Xtream returns stream URL in different formats
                     if (data && data.url) {
                         callback(null, data.url);
                     } else if (data && data.stream_url) {
@@ -1282,11 +1328,11 @@
                     } else if (data && data.stream_info && data.stream_info.url) {
                         callback(null, data.stream_info.url);
                     } else {
-                        // Try to construct URL from server info
-                        var base = account.serverUrl.replace(/\/player_api\.php.*$/, '');
-                        var streamUrl = base + '/live/' + encodeURIComponent(account.username) + '/' +
+                        // Construct URL
+                        var base2 = account.serverUrl.replace(/\/player_api\.php.*$/, '');
+                        var streamUrl2 = base2 + '/live/' + encodeURIComponent(account.username) + '/' +
                             encodeURIComponent(account.password) + '/' + streamId + '.m3u8';
-                        callback(null, streamUrl);
+                        callback(null, streamUrl2);
                     }
                 });
             }
@@ -1319,13 +1365,9 @@
                         return;
                     }
                     showToast('Bağlantı başarılı!', 'success');
-                    // Store user info
                     STATE.userInfo = data.user_info || {};
-                    // Switch to player screen
                     showPlayerScreen();
-                    // Load categories for live (default)
                     loadCategories('live');
-                    // Save current account
                     saveAccounts();
                     renderAccountList();
                 });
@@ -1350,38 +1392,38 @@
                         return;
                     }
 
-                    // Cache categories
                     STATE.apiCache[type + '_categories'] = categories;
 
-                    // Build category list
                     var list = dom.categoryList;
                     var html = '<div class="category-item active" data-id="-1" tabindex="0">' +
                         '📁 Tümü <span class="count">-</span></div>';
                     for (var i = 0; i < categories.length; i++) {
                         var cat = categories[i];
-                        html += '<div class="category-item" data-id="' + (cat.category_id || cat.id) +
-                            '" tabindex="0">' +
-                            '📂 ' + escapeHtml(cat.category_name || cat.name || 'Kategori') +
+                        var catId = cat.category_id || cat.id || i;
+                        var catName = cat.category_name || cat.name || 'Kategori';
+                        html += '<div class="category-item" data-id="' + catId + '" tabindex="0">' +
+                            '📂 ' + escapeHtml(catName) +
                             ' <span class="count">-</span></div>';
                     }
                     list.innerHTML = html;
 
-                    // Click handlers
-                    list.querySelectorAll('.category-item').forEach(function(el) {
-                        el.addEventListener('click', function() {
-                            var id = this.getAttribute('data-id');
-                            selectCategory(id, type);
-                        });
-                        el.addEventListener('keydown', function(e) {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
+                    var items = list.querySelectorAll('.category-item');
+                    for (var j = 0; j < items.length; j++) {
+                        (function(el) {
+                            el.addEventListener('click', function() {
                                 var id = this.getAttribute('data-id');
                                 selectCategory(id, type);
-                            }
-                        });
-                    });
+                            });
+                            el.addEventListener('keydown', function(e) {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    var id = this.getAttribute('data-id');
+                                    selectCategory(id, type);
+                                }
+                            });
+                        })(items[j]);
+                    }
 
-                    // Load first category (all)
                     selectCategory('-1', type);
                 });
             }
@@ -1394,7 +1436,6 @@
                 STATE.currentCategory = categoryId;
                 STATE.searchQuery = '';
 
-                // Update active state
                 var items = dom.categoryList.querySelectorAll('.category-item');
                 for (var i = 0; i < items.length; i++) {
                     var el = items[i];
@@ -1406,20 +1447,18 @@
                 }
 
                 showLoading('İçerik yükleniyor...');
-                fetchItems(account, type, categoryId, function(err, items) {
+                fetchItems(account, type, categoryId, function(err, data) {
                     hideLoading();
                     if (err) {
                         showToast('İçerik yüklenirken hata: ' + err, 'error');
                         return;
                     }
 
-                    // Cache
-                    STATE.apiCache[type + '_items_' + categoryId] = items;
+                    STATE.apiCache[type + '_items_' + categoryId] = data;
 
-                    // Update category counts
                     var countMap = {};
-                    for (var j = 0; j < items.length; j++) {
-                        var catId = items[j].category_id || items[j].category_id || '0';
+                    for (var j = 0; j < data.length; j++) {
+                        var catId = data[j].category_id || data[j].category_id || '0';
                         countMap[catId] = (countMap[catId] || 0) + 1;
                     }
                     var catItems = dom.categoryList.querySelectorAll('.category-item');
@@ -1428,13 +1467,13 @@
                         var id2 = el2.getAttribute('data-id');
                         var count = countMap[id2] || countMap['0'] || 0;
                         if (id2 === '-1') {
-                            count = items.length;
+                            count = data.length;
                         }
                         var span = el2.querySelector('.count');
                         if (span) span.textContent = count;
                     }
 
-                    renderItems(items, type);
+                    renderItems(data, type);
                 });
             }
 
@@ -1469,36 +1508,41 @@
                 }
                 grid.innerHTML = html;
 
-                // Click handlers for channel cards
-                grid.querySelectorAll('.channel-card').forEach(function(el) {
-                    el.addEventListener('click', function() {
-                        var id = this.getAttribute('data-id');
-                        var type = this.getAttribute('data-type') || STATE.currentType;
-                        var name = this.querySelector('.name')?.textContent || 'İsimsiz';
-                        playItem(id, type, name);
-                    });
-                    el.addEventListener('keydown', function(e) {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
+                var cards = grid.querySelectorAll('.channel-card');
+                for (var j = 0; j < cards.length; j++) {
+                    (function(el) {
+                        el.addEventListener('click', function() {
                             var id = this.getAttribute('data-id');
                             var type = this.getAttribute('data-type') || STATE.currentType;
-                            var name = this.querySelector('.name')?.textContent || 'İsimsiz';
+                            var nameEl = this.querySelector('.name');
+                            var name = nameEl ? nameEl.textContent : 'İsimsiz';
                             playItem(id, type, name);
-                        }
-                    });
-                });
+                        });
+                        el.addEventListener('keydown', function(e) {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                var id = this.getAttribute('data-id');
+                                var type = this.getAttribute('data-type') || STATE.currentType;
+                                var nameEl = this.querySelector('.name');
+                                var name = nameEl ? nameEl.textContent : 'İsimsiz';
+                                playItem(id, type, name);
+                            }
+                        });
+                    })(cards[j]);
+                }
 
-                // Favorite buttons
-                grid.querySelectorAll('.favorite-btn').forEach(function(el) {
-                    el.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        var id = this.getAttribute('data-id');
-                        var type = this.getAttribute('data-type') || STATE.currentType;
-                        toggleFavorite(type, id);
-                    });
-                });
+                var favBtns = grid.querySelectorAll('.favorite-btn');
+                for (var k = 0; k < favBtns.length; k++) {
+                    (function(el) {
+                        el.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            var id = this.getAttribute('data-id');
+                            var type = this.getAttribute('data-type') || STATE.currentType;
+                            toggleFavorite(type, id);
+                        });
+                    })(favBtns[k]);
+                }
 
-                // Apply search filter
                 if (STATE.searchQuery) {
                     filterGrid(STATE.searchQuery);
                 }
@@ -1509,8 +1553,10 @@
                 var q = query.toLowerCase().trim();
                 for (var i = 0; i < cards.length; i++) {
                     var card = cards[i];
-                    var name = card.querySelector('.name')?.textContent || '';
-                    var meta = card.querySelector('.meta')?.textContent || '';
+                    var nameEl = card.querySelector('.name');
+                    var metaEl = card.querySelector('.meta');
+                    var name = nameEl ? nameEl.textContent : '';
+                    var meta = metaEl ? metaEl.textContent : '';
                     var match = name.toLowerCase().indexOf(q) !== -1 || meta.toLowerCase().indexOf(q) !== -1;
                     card.style.display = match ? '' : 'none';
                 }
@@ -1549,8 +1595,6 @@
                     hideLoading();
                     showToast('▶️ ' + (title || 'Oynatılıyor'), 'success');
                     updateFavoriteButton();
-
-                    // Save watch history
                     saveWatchHistory(type, itemId, title);
                 });
             }
@@ -1558,13 +1602,18 @@
             function initPlayer(url) {
                 var video = dom.videoPlayer;
 
-                // Destroy previous HLS instance
                 if (STATE.hlsInstance) {
                     STATE.hlsInstance.destroy();
                     STATE.hlsInstance = null;
                 }
 
-                // Check if HLS is supported natively
+                // Check if URL is valid
+                if (!url || url.indexOf('file://') === 0) {
+                    showToast('Geçersiz stream URL.', 'error');
+                    return;
+                }
+
+                // Native HLS support
                 if (video.canPlayType('application/vnd.apple.mpegurl') ||
                     video.canPlayType('application/x-mpegURL')) {
                     video.src = url;
@@ -1574,35 +1623,38 @@
                     return;
                 }
 
-                // Use HLS.js
-                if (Hls && Hls.isSupported()) {
-                    var hls = new Hls({
-                        enableWorker: true,
-                        lowLatencyMode: true,
-                        maxLoadingDelay: 4,
-                        maxBufferLength: 30,
-                        maxMaxBufferLength: 60,
-                        startLevel: -1 // auto
-                    });
-                    STATE.hlsInstance = hls;
-                    hls.loadSource(url);
-                    hls.attachMedia(video);
-                    hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                        video.play();
-                        STATE.isPlaying = true;
-                        updatePlayPauseButton();
-                    });
-                    hls.on(Hls.Events.ERROR, function(event, data) {
-                        if (data.fatal) {
-                            // Try to recover
-                            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                                showToast('Ağ hatası, yeniden bağlanılıyor...', 'error');
-                                hls.startLoad();
-                            } else {
-                                showToast('Video hatası: ' + (data.details || ''), 'error');
+                // HLS.js
+                if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+                    try {
+                        var hls = new Hls({
+                            enableWorker: true,
+                            lowLatencyMode: true,
+                            maxLoadingDelay: 4,
+                            maxBufferLength: 30,
+                            maxMaxBufferLength: 60,
+                            startLevel: -1
+                        });
+                        STATE.hlsInstance = hls;
+                        hls.loadSource(url);
+                        hls.attachMedia(video);
+                        hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                            video.play();
+                            STATE.isPlaying = true;
+                            updatePlayPauseButton();
+                        });
+                        hls.on(Hls.Events.ERROR, function(event, data) {
+                            if (data.fatal) {
+                                if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                                    showToast('Ağ hatası, yeniden bağlanılıyor...', 'error');
+                                    hls.startLoad();
+                                } else {
+                                    showToast('Video hatası: ' + (data.details || ''), 'error');
+                                }
                             }
-                        }
-                    });
+                        });
+                    } catch (e) {
+                        showToast('HLS başlatılamadı: ' + e.message, 'error');
+                    }
                 } else {
                     showToast('HLS desteği bulunamadı.', 'error');
                 }
@@ -1642,21 +1694,21 @@
                     favs.splice(idx, 1);
                     showToast('☆ Favorilerden çıkarıldı.', 'info');
                 }
-                localStorage.setItem('iptv_favorites', JSON.stringify(favs));
+                try {
+                    localStorage.setItem('iptv_favorites', JSON.stringify(favs));
+                } catch (e) {}
                 updateFavoriteButton();
-                // Refresh grid if visible
-                if (dom.channelGrid.style.display !== 'none') {
-                    var items = dom.channelGrid.querySelectorAll('.channel-card');
-                    for (var i = 0; i < items.length; i++) {
-                        var card = items[i];
-                        var fid = card.getAttribute('data-id');
-                        var ftype = card.getAttribute('data-type') || STATE.currentType;
-                        if (fid === id && ftype === type) {
-                            var btn = card.querySelector('.favorite-btn');
-                            if (btn) {
-                                var isFav = isItemFavorite(type, id);
-                                btn.textContent = isFav ? '⭐' : '☆';
-                            }
+                // Update grid
+                var cards = dom.channelGrid.querySelectorAll('.channel-card');
+                for (var i = 0; i < cards.length; i++) {
+                    var card = cards[i];
+                    var fid = card.getAttribute('data-id');
+                    var ftype = card.getAttribute('data-type') || STATE.currentType;
+                    if (fid === id && ftype === type) {
+                        var btn = card.querySelector('.favorite-btn');
+                        if (btn) {
+                            var isFav = isItemFavorite(type, id);
+                            btn.textContent = isFav ? '⭐' : '☆';
                         }
                     }
                 }
@@ -1668,26 +1720,36 @@
             }
 
             function saveWatchHistory(type, id, title) {
-                var history = STATE.watchHistory;
-                var key = type + ':' + id;
-                history[key] = {
-                    title: title,
-                    type: type,
-                    id: id,
-                    timestamp: Date.now(),
-                    position: 0
-                };
-                localStorage.setItem('iptv_watch_history', JSON.stringify(history));
+                try {
+                    var history = STATE.watchHistory;
+                    var key = type + ':' + id;
+                    history[key] = {
+                        title: title,
+                        type: type,
+                        id: id,
+                        timestamp: Date.now(),
+                        position: 0
+                    };
+                    localStorage.setItem('iptv_watch_history', JSON.stringify(history));
+                } catch (e) {}
             }
 
             function loadWatchHistory() {
-                var data = localStorage.getItem('iptv_watch_history');
-                STATE.watchHistory = data ? safeParseJSON(data) || {} : {};
+                try {
+                    var data = localStorage.getItem('iptv_watch_history');
+                    STATE.watchHistory = data ? safeParseJSON(data) || {} : {};
+                } catch (e) {
+                    STATE.watchHistory = {};
+                }
             }
 
             function loadFavorites() {
-                var data = localStorage.getItem('iptv_favorites');
-                STATE.favorites = data ? safeParseJSON(data) || [] : [];
+                try {
+                    var data = localStorage.getItem('iptv_favorites');
+                    STATE.favorites = data ? safeParseJSON(data) || [] : [];
+                } catch (e) {
+                    STATE.favorites = [];
+                }
             }
 
             // =============================================================
@@ -1697,9 +1759,7 @@
             function showPlayerScreen() {
                 dom.panelScreen.style.display = 'none';
                 dom.playerScreen.className = 'active';
-                // Focus video wrapper
                 dom.videoWrapper.focus();
-                // Auto show controls
                 dom.playerControls.className = 'player-controls active';
                 setTimeout(function() {
                     dom.playerControls.className = 'player-controls';
@@ -1709,9 +1769,7 @@
             function showPanelScreen() {
                 dom.panelScreen.style.display = 'flex';
                 dom.playerScreen.className = '';
-                // Stop video
                 stopVideo();
-                // Hide sidebar
                 closeSidebar();
             }
 
@@ -1771,16 +1829,24 @@
                 STATE.isLightTheme = !STATE.isLightTheme;
                 document.body.className = STATE.isLightTheme ? 'light-theme' : '';
                 dom.themeToggle.textContent = STATE.isLightTheme ? '🌙' : '☀️';
-                localStorage.setItem('iptv_theme', STATE.isLightTheme ? 'light' : 'dark');
+                try {
+                    localStorage.setItem('iptv_theme', STATE.isLightTheme ? 'light' : 'dark');
+                } catch (e) {}
             }
 
             function loadTheme() {
-                var theme = localStorage.getItem('iptv_theme');
-                if (theme === 'light') {
-                    STATE.isLightTheme = true;
-                    document.body.className = 'light-theme';
-                    dom.themeToggle.textContent = '🌙';
-                } else {
+                try {
+                    var theme = localStorage.getItem('iptv_theme');
+                    if (theme === 'light') {
+                        STATE.isLightTheme = true;
+                        document.body.className = 'light-theme';
+                        dom.themeToggle.textContent = '🌙';
+                    } else {
+                        STATE.isLightTheme = false;
+                        document.body.className = '';
+                        dom.themeToggle.textContent = '☀️';
+                    }
+                } catch (e) {
                     STATE.isLightTheme = false;
                     document.body.className = '';
                     dom.themeToggle.textContent = '☀️';
@@ -1925,37 +1991,37 @@
             // =============================================================
 
             function init() {
-                // Device ID
-                STATE.deviceId = getDeviceId();
+                try {
+                    // Device ID
+                    STATE.deviceId = getDeviceId();
 
-                // License
-                checkLicense();
+                    // License
+                    checkLicense();
 
-                // Theme
-                loadTheme();
+                    // Theme
+                    loadTheme();
 
-                // Load data
-                loadAccounts();
-                loadFavorites();
-                loadWatchHistory();
+                    // Load data
+                    loadAccounts();
+                    loadFavorites();
+                    loadWatchHistory();
 
-                // Bind events
-                bindEvents();
+                    // Bind events
+                    bindEvents();
 
-                // If no accounts, focus first input
-                if (STATE.accounts.length === 0) {
-                    dom.serverUrl.focus();
-                }
+                    STATE.isInitialized = true;
 
-                console.log('📺 LG Smart IPTV initialized');
-                console.log('📱 Device ID:', STATE.deviceId);
-                console.log('🔒 License:', STATE.licenseValid ? 'Valid' : 'Invalid');
-                console.log('📋 Accounts:', STATE.accounts.length);
+                    console.log('📺 LG Smart IPTV initialized');
+                    console.log('📱 Device ID:', STATE.deviceId);
+                    console.log('🔒 License:', STATE.licenseValid ? 'Valid' : 'Invalid');
+                    console.log('📋 Accounts:', STATE.accounts.length);
 
-                // Check if there's a preferred account to auto-connect
-                var preferred = localStorage.getItem('iptv_preferred_account');
-                if (preferred && findAccount(preferred)) {
-                    // Don't auto-connect, user can click
+                    if (STATE.accounts.length === 0) {
+                        dom.serverUrl.focus();
+                    }
+                } catch (e) {
+                    console.error('Init error:', e);
+                    showToast('Başlangıç hatası: ' + e.message, 'error');
                 }
             }
 
