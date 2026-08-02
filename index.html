@@ -488,6 +488,12 @@
             font-size: 2.5rem;
             margin-bottom: 8px;
         }
+        .channel-card .icon img {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            border-radius: 8px;
+        }
         .channel-card .name {
             font-weight: 600;
             font-size: 0.95rem;
@@ -781,7 +787,7 @@
 
     <script>
         /* ==============================================================
-               LG Smart IPTV - LG webOS Optimized
+               LG Smart IPTV - Optimized for LG webOS
                ============================================================== */
 
         (function() {
@@ -809,7 +815,12 @@
                 currentStreamUrl: null,
                 sidebarOpen: false,
                 searchQuery: '',
-                isInitialized: false
+                isInitialized: false,
+                allItems: [], // Store all items for filtering
+                currentPage: 0,
+                pageSize: 50, // Load 50 items at a time
+                isLoadingMore: false,
+                allItemsLoaded: false
             };
 
             // =============================================================
@@ -912,10 +923,6 @@
                 dom.loadingOverlay.className = 'loading-overlay hidden';
             }
 
-            function isObject(obj) {
-                return obj && typeof obj === 'object' && !Array.isArray(obj);
-            }
-
             function safeParseJSON(str) {
                 try {
                     return JSON.parse(str);
@@ -937,7 +944,7 @@
             }
 
             // =============================================================
-            // 4. LICENSE SYSTEM (LG webOS Compatible)
+            // 4. LICENSE SYSTEM
             // =============================================================
 
             function checkLicense() {
@@ -958,17 +965,10 @@
                                         .toLocaleDateString() + ')';
                                 }
                                 return true;
-                            } else {
-                                STATE.licenseValid = false;
-                                if (dom.licenseStatus) {
-                                    dom.licenseStatus.textContent = '🔒 Lisans: Süresi doldu';
-                                }
-                                return false;
                             }
                         }
                     }
 
-                    // No license or invalid => start trial
                     var trialDays = 7;
                     var trialExpiry = now + (trialDays * 24 * 60 * 60 * 1000);
                     var licenseData = {
@@ -985,8 +985,6 @@
                     }
                     return true;
                 } catch (e) {
-                    console.log('License check error:', e);
-                    // Fallback: allow trial
                     STATE.licenseValid = true;
                     if (dom.licenseStatus) {
                         dom.licenseStatus.textContent = '🔓 Deneme sürümü';
@@ -996,7 +994,7 @@
             }
 
             // =============================================================
-            // 5. ACCOUNT MANAGEMENT (CRUD)
+            // 5. ACCOUNT MANAGEMENT
             // =============================================================
 
             function loadAccounts() {
@@ -1050,7 +1048,6 @@
                 }
                 list.innerHTML = html;
 
-                // Event delegation for account actions
                 var items = list.querySelectorAll('[data-action]');
                 for (var j = 0; j < items.length; j++) {
                     (function(el) {
@@ -1069,7 +1066,6 @@
                     })(items[j]);
                 }
 
-                // Click on account item to select
                 var accItems = list.querySelectorAll('.account-item');
                 for (var k = 0; k < accItems.length; k++) {
                     (function(el) {
@@ -1182,14 +1178,14 @@
             }
 
             // =============================================================
-            // 6. API CLIENT (Xtream Codes - ES5 XMLHttpRequest)
+            // 6. API CLIENT
             // =============================================================
 
             function apiRequest(url, callback) {
                 try {
                     var xhr = new XMLHttpRequest();
                     xhr.open('GET', url, true);
-                    xhr.timeout = 15000;
+                    xhr.timeout = 30000; // Increased timeout
                     xhr.onreadystatechange = function() {
                         if (xhr.readyState === 4) {
                             if (xhr.status >= 200 && xhr.status < 300) {
@@ -1243,9 +1239,6 @@
                     }
                     if (data && data.user_info) {
                         callback(null, data);
-                    } else if (data && data.user_info === undefined && data.length !== undefined) {
-                        // Some servers return array directly
-                        callback(null, { user_info: { username: account.username } });
                     } else {
                         callback('Geçersiz kimlik bilgileri veya sunucu yanıtı.', null);
                     }
@@ -1314,7 +1307,6 @@
                 var url = buildApiUrl(account, action, params);
                 apiRequest(url, function(err, data) {
                     if (err) {
-                        // Fallback: construct URL directly
                         var base = account.serverUrl.replace(/\/player_api\.php.*$/, '');
                         var streamUrl = base + '/live/' + encodeURIComponent(account.username) + '/' +
                             encodeURIComponent(account.password) + '/' + streamId + '.m3u8';
@@ -1328,7 +1320,6 @@
                     } else if (data && data.stream_info && data.stream_info.url) {
                         callback(null, data.stream_info.url);
                     } else {
-                        // Construct URL
                         var base2 = account.serverUrl.replace(/\/player_api\.php.*$/, '');
                         var streamUrl2 = base2 + '/live/' + encodeURIComponent(account.username) + '/' +
                             encodeURIComponent(account.password) + '/' + streamId + '.m3u8';
@@ -1338,7 +1329,7 @@
             }
 
             // =============================================================
-            // 7. CONNECT & LOAD DATA
+            // 7. CONNECT & LOAD DATA (Optimized)
             // =============================================================
 
             function connectAccount(id) {
@@ -1349,13 +1340,16 @@
                 }
 
                 if (!STATE.licenseValid) {
-                    showToast('Lisans geçersiz. Lütfen uygulamayı yeniden başlatın.', 'error');
+                    showToast('Lisans geçersiz.', 'error');
                     return;
                 }
 
                 STATE.currentAccountId = id;
                 STATE.currentCategory = null;
                 STATE.currentItem = null;
+                STATE.allItems = [];
+                STATE.currentPage = 0;
+                STATE.allItemsLoaded = false;
 
                 showLoading('Bağlanıyor...');
                 authenticateAccount(account, function(err, data) {
@@ -1383,6 +1377,9 @@
                 STATE.currentType = type;
                 STATE.currentCategory = null;
                 STATE.searchQuery = '';
+                STATE.allItems = [];
+                STATE.currentPage = 0;
+                STATE.allItemsLoaded = false;
 
                 showLoading('Kategoriler yükleniyor...');
                 fetchCategories(account, type, function(err, categories) {
@@ -1435,6 +1432,9 @@
 
                 STATE.currentCategory = categoryId;
                 STATE.searchQuery = '';
+                STATE.allItems = [];
+                STATE.currentPage = 0;
+                STATE.allItemsLoaded = false;
 
                 var items = dom.categoryList.querySelectorAll('.category-item');
                 for (var i = 0; i < items.length; i++) {
@@ -1454,8 +1454,11 @@
                         return;
                     }
 
-                    STATE.apiCache[type + '_items_' + categoryId] = data;
+                    STATE.allItems = data || [];
+                    STATE.currentPage = 0;
+                    STATE.allItemsLoaded = false;
 
+                    // Update category counts
                     var countMap = {};
                     for (var j = 0; j < data.length; j++) {
                         var catId = data[j].category_id || data[j].category_id || '0';
@@ -1473,43 +1476,66 @@
                         if (span) span.textContent = count;
                     }
 
-                    renderItems(data, type);
+                    // Render first page
+                    renderItemsPaginated();
                 });
             }
 
-            function renderItems(items, type) {
-                var grid = dom.channelGrid;
+            // =============================================================
+            // 8. PAGINATED RENDER
+            // =============================================================
+
+            function renderItemsPaginated() {
+                var items = STATE.allItems;
                 if (!items || items.length === 0) {
-                    grid.innerHTML =
+                    dom.channelGrid.innerHTML =
                         '<div style="grid-column:1/-1;text-align:center;padding:60px 0;opacity:0.5;">İçerik bulunamadı.</div>';
                     return;
                 }
 
+                var start = STATE.currentPage * STATE.pageSize;
+                var end = Math.min(start + STATE.pageSize, items.length);
+                var pageItems = items.slice(start, end);
+
+                if (pageItems.length === 0 && STATE.currentPage > 0) {
+                    STATE.allItemsLoaded = true;
+                    return;
+                }
+
                 var html = '';
-                for (var i = 0; i < items.length; i++) {
-                    var item = items[i];
+                for (var i = 0; i < pageItems.length; i++) {
+                    var item = pageItems[i];
                     var id = item.stream_id || item.id || item.series_id || '';
                     var name = item.name || item.title || item.stream_name || 'İsimsiz';
                     var icon = item.icon || item.stream_icon || item.cover || '';
-                    var isFavorite = isItemFavorite(type, id);
+                    var isFavorite = isItemFavorite(STATE.currentType, id);
 
-                    html += '<div class="channel-card" data-id="' + id + '" data-type="' + type + '" tabindex="0">';
+                    html += '<div class="channel-card" data-id="' + id + '" data-type="' + STATE.currentType +
+                        '" tabindex="0">';
                     if (icon) {
                         html += '<div class="icon"><img src="' + escapeHtml(icon) +
-                            '" style="width:60px;height:60px;object-fit:contain;border-radius:8px;" alt="" /></div>';
+                            '" alt="" loading="lazy" /></div>';
                     } else {
                         html += '<div class="icon">📺</div>';
                     }
                     html += '<div class="name">' + escapeHtml(name) + '</div>';
                     html += '<div class="meta">' + (item.category_name || '') + '</div>';
                     html += '<button class="favorite-btn" data-action="favorite" data-id="' + id + '" data-type="' +
-                        type + '">' + (isFavorite ? '⭐' : '☆') + '</button>';
+                        STATE.currentType + '">' + (isFavorite ? '⭐' : '☆') + '</button>';
                     html += '</div>';
                 }
-                grid.innerHTML = html;
 
-                var cards = grid.querySelectorAll('.channel-card');
-                for (var j = 0; j < cards.length; j++) {
+                // Append to grid
+                if (STATE.currentPage === 0) {
+                    dom.channelGrid.innerHTML = html;
+                } else {
+                    dom.channelGrid.innerHTML += html;
+                }
+
+                // Bind events for new cards
+                var newCards = dom.channelGrid.querySelectorAll('.channel-card');
+                var startIndex = start;
+                for (var j = startIndex; j < newCards.length; j++) {
                     (function(el) {
                         el.addEventListener('click', function() {
                             var id = this.getAttribute('data-id');
@@ -1528,10 +1554,11 @@
                                 playItem(id, type, name);
                             }
                         });
-                    })(cards[j]);
+                    })(newCards[j]);
                 }
 
-                var favBtns = grid.querySelectorAll('.favorite-btn');
+                // Favorite buttons
+                var favBtns = dom.channelGrid.querySelectorAll('.favorite-btn');
                 for (var k = 0; k < favBtns.length; k++) {
                     (function(el) {
                         el.addEventListener('click', function(e) {
@@ -1543,14 +1570,51 @@
                     })(favBtns[k]);
                 }
 
+                STATE.currentPage++;
+
+                // Check if all items loaded
+                if (end >= items.length) {
+                    STATE.allItemsLoaded = true;
+                } else {
+                    // Load more on scroll
+                    setupInfiniteScroll();
+                }
+
+                // Apply search filter
                 if (STATE.searchQuery) {
                     filterGrid(STATE.searchQuery);
                 }
             }
 
+            function setupInfiniteScroll() {
+                var grid = dom.channelGrid;
+                var scrollHandler = function() {
+                    if (STATE.allItemsLoaded || STATE.isLoadingMore) return;
+
+                    var scrollTop = grid.scrollTop;
+                    var scrollHeight = grid.scrollHeight;
+                    var clientHeight = grid.clientHeight;
+
+                    if (scrollTop + clientHeight >= scrollHeight - 200) {
+                        STATE.isLoadingMore = true;
+                        showLoading('Daha fazla yükleniyor...');
+                        setTimeout(function() {
+                            renderItemsPaginated();
+                            STATE.isLoadingMore = false;
+                            hideLoading();
+                        }, 100);
+                    }
+                };
+
+                grid.addEventListener('scroll', scrollHandler);
+                // Store handler reference for cleanup
+                grid._scrollHandler = scrollHandler;
+            }
+
             function filterGrid(query) {
                 var cards = dom.channelGrid.querySelectorAll('.channel-card');
                 var q = query.toLowerCase().trim();
+                var visibleCount = 0;
                 for (var i = 0; i < cards.length; i++) {
                     var card = cards[i];
                     var nameEl = card.querySelector('.name');
@@ -1559,11 +1623,22 @@
                     var meta = metaEl ? metaEl.textContent : '';
                     var match = name.toLowerCase().indexOf(q) !== -1 || meta.toLowerCase().indexOf(q) !== -1;
                     card.style.display = match ? '' : 'none';
+                    if (match) visibleCount++;
+                }
+
+                // If no visible items and we have more items to load, load more
+                if (visibleCount === 0 && !STATE.allItemsLoaded && STATE.allItems.length > 0) {
+                    // Load more to find matches
+                    if (!STATE.isLoadingMore) {
+                        STATE.isLoadingMore = true;
+                        renderItemsPaginated();
+                        STATE.isLoadingMore = false;
+                    }
                 }
             }
 
             // =============================================================
-            // 8. PLAYER
+            // 9. PLAYER
             // =============================================================
 
             function playItem(itemId, type, title) {
@@ -1607,13 +1682,11 @@
                     STATE.hlsInstance = null;
                 }
 
-                // Check if URL is valid
                 if (!url || url.indexOf('file://') === 0) {
                     showToast('Geçersiz stream URL.', 'error');
                     return;
                 }
 
-                // Native HLS support
                 if (video.canPlayType('application/vnd.apple.mpegurl') ||
                     video.canPlayType('application/x-mpegURL')) {
                     video.src = url;
@@ -1623,11 +1696,10 @@
                     return;
                 }
 
-                // HLS.js
                 if (typeof Hls !== 'undefined' && Hls.isSupported()) {
                     try {
                         var hls = new Hls({
-                            enableWorker: true,
+                            enableWorker: false, // Disable worker for LG TV
                             lowLatencyMode: true,
                             maxLoadingDelay: 4,
                             maxBufferLength: 30,
@@ -1698,6 +1770,7 @@
                     localStorage.setItem('iptv_favorites', JSON.stringify(favs));
                 } catch (e) {}
                 updateFavoriteButton();
+
                 // Update grid
                 var cards = dom.channelGrid.querySelectorAll('.channel-card');
                 for (var i = 0; i < cards.length; i++) {
@@ -1753,7 +1826,7 @@
             }
 
             // =============================================================
-            // 9. NAVIGATION & UI
+            // 10. NAVIGATION & UI
             // =============================================================
 
             function showPlayerScreen() {
@@ -1822,7 +1895,7 @@
             }
 
             // =============================================================
-            // 10. THEME
+            // 11. THEME
             // =============================================================
 
             function toggleTheme() {
@@ -1854,16 +1927,14 @@
             }
 
             // =============================================================
-            // 11. EVENT BINDING
+            // 12. EVENT BINDING
             // =============================================================
 
             function bindEvents() {
-                // Panel
                 dom.saveAccountBtn.addEventListener('click', saveAccount);
                 dom.clearFormBtn.addEventListener('click', clearForm);
                 dom.themeToggle.addEventListener('click', toggleTheme);
 
-                // Player controls
                 dom.playPauseBtn.addEventListener('click', togglePlayPause);
                 dom.favoriteBtn.addEventListener('click', function() {
                     var item = STATE.currentItem;
@@ -1880,7 +1951,6 @@
                 });
                 dom.fullscreenBtn.addEventListener('click', toggleFullscreen);
 
-                // Volume
                 dom.volumeSlider.addEventListener('input', function() {
                     dom.videoPlayer.volume = parseFloat(this.value);
                     dom.muteBtn.textContent = dom.videoPlayer.volume > 0 ? '🔊' : '🔇';
@@ -1891,7 +1961,6 @@
                     this.textContent = video.muted ? '🔇' : '🔊';
                 });
 
-                // Progress bar
                 dom.progressBar.addEventListener('click', function(e) {
                     var rect = this.getBoundingClientRect();
                     var x = (e.clientX - rect.left) / rect.width;
@@ -1901,7 +1970,6 @@
                     }
                 });
 
-                // Video events
                 var video = dom.videoPlayer;
                 video.addEventListener('timeupdate', updateProgress);
                 video.addEventListener('loadedmetadata', function() {
@@ -1923,15 +1991,23 @@
                     showToast('Video hatası: ' + (this.error ? this.error.message : ''), 'error');
                 });
 
-                // Search
                 var searchDebounced = debounce(function() {
                     var query = dom.searchInput.value;
                     STATE.searchQuery = query;
-                    filterGrid(query);
+                    // Reset grid and show filtered results
+                    if (query.length > 2) {
+                        // Search across all items
+                        filterGrid(query);
+                    } else if (query.length === 0) {
+                        // Show all
+                        var cards = dom.channelGrid.querySelectorAll('.channel-card');
+                        for (var i = 0; i < cards.length; i++) {
+                            cards[i].style.display = '';
+                        }
+                    }
                 }, 300);
                 dom.searchInput.addEventListener('input', searchDebounced);
 
-                // Keyboard shortcuts
                 document.addEventListener('keydown', function(e) {
                     if (e.key === ' ' && dom.playerScreen.className === 'active') {
                         e.preventDefault();
@@ -1946,12 +2022,10 @@
                     }
                 });
 
-                // Fullscreen change
                 document.addEventListener('fullscreenchange', function() {
                     dom.fullscreenBtn.textContent = document.fullscreenElement ? '⛶' : '⛶';
                 });
 
-                // Auto-hide controls
                 var controlsTimer = null;
                 dom.videoWrapper.addEventListener('mousemove', function() {
                     dom.playerControls.className = 'player-controls active';
@@ -1987,26 +2061,17 @@
             }
 
             // =============================================================
-            // 12. INIT
+            // 13. INIT
             // =============================================================
 
             function init() {
                 try {
-                    // Device ID
                     STATE.deviceId = getDeviceId();
-
-                    // License
                     checkLicense();
-
-                    // Theme
                     loadTheme();
-
-                    // Load data
                     loadAccounts();
                     loadFavorites();
                     loadWatchHistory();
-
-                    // Bind events
                     bindEvents();
 
                     STATE.isInitialized = true;
@@ -2025,7 +2090,6 @@
                 }
             }
 
-            // Start when DOM ready
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', init);
             } else {
