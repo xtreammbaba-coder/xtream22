@@ -4,120 +4,78 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>LG IPTV Oynatıcı</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@0.14.17/dist/hls.min.js" crossorigin="anonymous"></script>
   <style>
-    /* ============ TEMEL STİLLER ============ */
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    
-    /* TEMA DEĞİŞKENLERİ */
     body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      transition: background 0.3s, color 0.3s;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      transition: background 0.2s, color 0.2s;
       min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
       padding: 12px;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     }
-    
-    /* Light Theme */
-    body.light {
-      background: #f0f2f5;
-      color: #1a1a2e;
+    :root {
+      --bg-primary: #f5f7fa;
+      --bg-secondary: #ffffff;
+      --bg-input: #eef1f5;
+      --bg-hover: #e0e4eb;
+      --text-primary: #1e293b;
+      --text-secondary: #334155;
+      --border-color: #cbd5e1;
+      --shadow: 0 8px 20px rgba(0,0,0,0.08);
+      --player-bg: #0b0e14;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --card-bg: #ffffff;
+      --error-bg: #fee2e2;
+      --error-text: #991b1b;
+      --success-bg: #dcfce7;
+      --success-text: #166534;
+      --warning-bg: #fef3c7;
+      --warning-text: #92400e;
+      --progress-bg: #e2e8f0;
+      --tab-live: #22c55e;
+      --tab-movies: #3b82f6;
+      --tab-series: #eab308;
     }
-    body.light .card { background: #ffffff; border-color: #e0e0e0; }
-    body.light .card-title { color: #1a1a2e; }
-    body.light .form-group input { background: #f5f5f5; color: #1a1a2e; border-color: #ddd; }
-    body.light .account-item { background: #f5f5f5; border-color: #ddd; }
-    body.light .account-info .url { color: #1a1a2e; }
-    body.light .account-info .user { color: #666; }
-    body.light .category-chip { background: #f0f0f0; color: #333; }
-    body.light .category-chip.active { background: #d63031; color: white; }
-    body.light .channel-item { background: #f0f0f0; color: #333; }
-    body.light .channel-item.active { background: #d63031; color: white; }
-    body.light .debug-info { background: #f5f5f5; color: #666; }
-    body.light .empty-text { color: #999; }
-    body.light .header-bar h1 { color: #1a1a2e; }
-    body.light .theme-btn { background: #f0f0f0; color: #333; }
-    body.light .back-panel-btn { background: #f0f0f0; color: #333; }
-    body.light .player-controls button { background: #f0f0f0; color: #333; }
-    body.light .content-tab { color: #666; border-color: #ddd; }
-    body.light .content-tab.active-live { background: #22c55e; color: white; border-color: #22c55e; }
-    body.light .content-tab.active-movies { background: #3b82f6; color: white; border-color: #3b82f6; }
-    body.light .content-tab.active-series { background: #eab308; color: white; border-color: #eab308; }
-    body.light .stream-url-box { background: #f5f5f5; color: #666; }
-    body.light .episode-item { background: #f5f5f5; color: #333; }
-    body.light .episode-item.active { background: #d63031; color: white; }
-    body.light .warning-box { background: #fef3c7; color: #92400e; }
-    body.light .account-info-row { color: #666; border-color: #ddd; }
-    body.light .account-info-row .label { color: #1a1a2e; }
-    body.light .load-more-btn { background: #f0f0f0; color: #333; border-color: #ddd; }
-    body.light .status-text { color: #666; }
-    body.light .now-playing { background: #ffffff; border-color: #e0e0e0; }
-    body.light .np-name { color: #1a1a2e; }
-    body.light .np-status { color: #888; }
-    body.light .ab-label { color: #888; }
-    body.light .ab-value { color: #555; }
-    body.light .video-controls { background: linear-gradient(transparent, rgba(0,0,0,0.7)); }
-    body.light .time-text { color: #ccc; }
-    body.light .vol-slider { background: rgba(255,255,255,0.3); }
-    body.light .vol-slider::-webkit-slider-thumb { background: #fff; }
-
-    /* Dark Theme */
-    body.dark {
-      background: #0b1120;
-      color: #e0e0e0;
+    [data-theme="dark"] {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-input: #2d3a4f;
+      --bg-hover: #334155;
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --border-color: #475569;
+      --shadow: 0 8px 20px rgba(0,0,0,0.5);
+      --card-bg: #1e293b;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --error-bg: #7f1d1d;
+      --error-text: #fca5a5;
+      --success-bg: #064e3b;
+      --success-text: #86efac;
+      --warning-bg: #78350f;
+      --warning-text: #fcd34d;
+      --progress-bg: #334155;
+      --tab-live: #22c55e;
+      --tab-movies: #3b82f6;
+      --tab-series: #eab308;
     }
-    body.dark .card { background: #111b30; border-color: #1a2744; }
-    body.dark .card-title { color: #e0e0e0; }
-    body.dark .form-group input { background: rgba(255,255,255,0.06); color: #e0e0e0; border-color: rgba(255,255,255,0.1); }
-    body.dark .account-item { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.06); }
-    body.dark .account-info .url { color: #e0e0e0; }
-    body.dark .account-info .user { color: #8899bb; }
-    body.dark .category-chip { background: rgba(255,255,255,0.06); color: #e0e0e0; }
-    body.dark .category-chip.active { background: #e94560; color: white; }
-    body.dark .channel-item { background: rgba(255,255,255,0.06); color: #e0e0e0; }
-    body.dark .channel-item.active { background: #e94560; color: white; }
-    body.dark .debug-info { background: rgba(255,255,255,0.05); color: #8899bb; }
-    body.dark .empty-text { color: #5577aa; }
-    body.dark .header-bar h1 { color: #e0e0e0; }
-    body.dark .theme-btn { background: rgba(255,255,255,0.06); color: #e0e0e0; }
-    body.dark .back-panel-btn { background: rgba(255,255,255,0.06); color: #e0e0e0; }
-    body.dark .player-controls button { background: rgba(255,255,255,0.06); color: #e0e0e0; }
-    body.dark .content-tab { color: #8899bb; border-color: #1a2744; }
-    body.dark .content-tab.active-live { background: #22c55e; color: white; border-color: #22c55e; }
-    body.dark .content-tab.active-movies { background: #3b82f6; color: white; border-color: #3b82f6; }
-    body.dark .content-tab.active-series { background: #eab308; color: white; border-color: #eab308; }
-    body.dark .stream-url-box { background: rgba(255,255,255,0.05); color: #8899bb; }
-    body.dark .episode-item { background: rgba(255,255,255,0.05); color: #e0e0e0; }
-    body.dark .episode-item.active { background: #e94560; color: white; }
-    body.dark .warning-box { background: #78350f; color: #fcd34d; }
-    body.dark .account-info-row { color: #8899bb; border-color: #1a2744; }
-    body.dark .account-info-row .label { color: #e0e0e0; }
-    body.dark .load-more-btn { background: rgba(255,255,255,0.06); color: #e0e0e0; border-color: #1a2744; }
-    body.dark .status-text { color: #8899bb; }
-    body.dark .now-playing { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.06); }
-    body.dark .np-name { color: #e0e0e0; }
-    body.dark .np-status { color: #667; }
-    body.dark .ab-label { color: #445; }
-    body.dark .ab-value { color: #99aabb; }
-    body.dark .video-controls { background: linear-gradient(transparent, rgba(0,0,0,0.85)); }
-    body.dark .time-text { color: #aaa; }
-    body.dark .vol-slider { background: rgba(255,255,255,0.2); }
-    body.dark .vol-slider::-webkit-slider-thumb { background: #fff; }
-
-    /* ============ LAYOUT ============ */
     #app {
       width: 100%;
       max-width: 1380px;
-      background: #ffffff;
+      background: var(--bg-secondary);
       border-radius: 32px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      box-shadow: var(--shadow);
       padding: 20px 24px 28px;
       transition: background 0.2s;
     }
-    body.dark #app { background: #1e293b; }
-    body.light #app { background: #ffffff; }
-
     .flex-row { display: flex; flex-wrap: wrap; gap: 24px; }
     .flex-col { flex: 1 1 280px; min-width: 240px; }
-    
     .header-bar {
       display: flex;
       justify-content: space-between;
@@ -126,15 +84,16 @@
       flex-wrap: wrap;
       gap: 12px;
     }
-    .header-bar h1 { font-size: 1.8rem; font-weight: 600; letter-spacing: -0.3px; }
-    
+    .header-bar h1 { font-size: 1.8rem; font-weight: 600; letter-spacing: -0.3px; color: var(--text-primary); }
     .theme-btn {
+      background: var(--bg-input);
       border: none;
       border-radius: 40px;
       padding: 10px 18px;
       font-size: 1.6rem;
       line-height: 1;
       cursor: pointer;
+      color: var(--text-primary);
       box-shadow: 0 2px 6px rgba(0,0,0,0.05);
       transition: 0.15s;
       display: flex;
@@ -142,37 +101,32 @@
       gap: 6px;
       font-weight: 500;
     }
-    .theme-btn:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+    .theme-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     .theme-btn span { font-size: 0.9rem; font-weight: 400; }
-
     .card {
+      background: var(--card-bg);
       border-radius: 24px;
       padding: 18px 20px 22px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-      border: 1px solid #e0e0e0;
+      border: 1px solid var(--border-color);
       transition: background 0.2s, border 0.2s;
     }
-    body.dark .card { border-color: #1a2744; }
-    
-    .card-title { font-weight: 600; font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-    
+    .card-title { font-weight: 600; font-size: 1.1rem; margin-bottom: 16px; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
     .form-group { margin-bottom: 14px; }
-    .form-group label { display: block; font-size: 0.8rem; font-weight: 500; margin-bottom: 4px; letter-spacing: 0.3px; color: #8899bb; }
-    body.light .form-group label { color: #666; }
+    .form-group label { display: block; font-size: 0.8rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; letter-spacing: 0.3px; }
     .form-group input {
       width: 100%;
       padding: 12px 14px;
-      border: 1px solid #ddd;
+      border: 1px solid var(--border-color);
       border-radius: 16px;
+      background: var(--bg-input);
+      color: var(--text-primary);
       font-size: 0.95rem;
       transition: 0.15s;
-      outline: none;
     }
-    body.dark .form-group input { border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); color: #e0e0e0; }
-    .form-group input:focus { outline: 2px solid #2563eb; border-color: transparent; }
-    
+    .form-group input:focus { outline: 2px solid var(--accent); border-color: transparent; }
     .btn {
-      background: #2563eb;
+      background: var(--accent);
       border: none;
       border-radius: 40px;
       padding: 12px 18px;
@@ -184,14 +138,14 @@
       width: 100%;
       letter-spacing: 0.3px;
     }
-    .btn:hover { background: #1d4ed8; }
-    .btn:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+    .btn:hover { background: var(--accent-hover); }
+    .btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
     .account-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      background: var(--bg-input);
       padding: 10px 14px;
       border-radius: 40px;
       margin-bottom: 10px;
@@ -200,42 +154,37 @@
       border: 1px solid transparent;
       transition: 0.1s;
     }
-    .account-item:focus-within { border-color: #2563eb; }
+    .account-item:focus-within { border-color: var(--accent); }
     .account-info { display: flex; flex-direction: column; font-size: 0.85rem; flex: 1; min-width: 120px; }
-    .account-info .url { font-weight: 500; }
-    .account-info .user { font-size: 0.75rem; }
+    .account-info .url { font-weight: 500; color: var(--text-primary); }
+    .account-info .user { color: var(--text-secondary); font-size: 0.75rem; }
     .account-actions { display: flex; gap: 6px; }
     .account-actions button {
       background: transparent;
-      border: 1px solid #ddd;
+      border: 1px solid var(--border-color);
       border-radius: 30px;
       padding: 4px 12px;
       font-size: 0.7rem;
       font-weight: 500;
       cursor: pointer;
-      color: #333;
+      color: var(--text-primary);
       transition: 0.1s;
     }
-    body.dark .account-actions button { border-color: #1a2744; color: #e0e0e0; }
-    .account-actions button:focus-visible { outline: 2px solid #2563eb; }
-    .account-actions .play-btn { background: #2563eb; border-color: #2563eb; color: white; }
-    .account-actions .play-btn:hover { background: #1d4ed8; }
+    .account-actions button:focus-visible { outline: 2px solid var(--accent); }
+    .account-actions .play-btn { background: var(--accent); border-color: var(--accent); color: white; }
+    .account-actions .play-btn:hover { background: var(--accent-hover); }
     .account-actions .delete-btn { background: #ef4444; border-color: #ef4444; color: white; }
     .account-actions .delete-btn:hover { background: #dc2626; }
-
-    .empty-text { font-size: 0.9rem; padding: 6px 0; opacity: 0.7; }
-
+    .empty-text { color: var(--text-secondary); font-size: 0.9rem; padding: 6px 0; opacity: 0.7; }
     #player-section {
       margin-top: 24px;
-      border-top: 2px solid #e0e0e0;
+      border-top: 2px solid var(--border-color);
       padding-top: 24px;
       display: none;
     }
-    body.dark #player-section { border-color: #1a2744; }
     #player-section.active { display: block; }
-
     .video-wrapper {
-      background: #0b0e14;
+      background: var(--player-bg);
       border-radius: 28px;
       overflow: hidden;
       position: relative;
@@ -249,7 +198,6 @@
       display: block;
       background: #0b0e14;
     }
-
     .player-controls {
       display: flex;
       flex-wrap: wrap;
@@ -259,22 +207,24 @@
       padding: 8px 4px;
     }
     .player-controls button {
+      background: var(--bg-input);
       border: none;
       border-radius: 40px;
       padding: 8px 18px;
       font-weight: 500;
+      color: var(--text-primary);
       cursor: pointer;
       font-size: 0.9rem;
     }
-    .player-controls button:focus-visible { outline: 2px solid #2563eb; }
+    .player-controls button:focus-visible { outline: 2px solid var(--accent); }
     .player-controls input[type="range"] {
       flex: 1;
       min-width: 80px;
-      accent-color: #2563eb;
+      accent-color: var(--accent);
+      background: var(--bg-input);
       height: 4px;
       border-radius: 20px;
     }
-
     .content-tabs {
       display: flex;
       gap: 8px;
@@ -283,20 +233,22 @@
     }
     .content-tab {
       padding: 6px 18px;
-      border: 2px solid #ddd;
+      border: 2px solid var(--border-color);
       border-radius: 30px;
       background: transparent;
+      color: var(--text-secondary);
       cursor: pointer;
       font-weight: 600;
       font-size: 0.85rem;
       transition: all 0.2s;
     }
-    body.dark .content-tab { border-color: #1a2744; color: #8899bb; }
-    .content-tab:hover { border-color: #2563eb; }
-    .content-tab.active-live { background: #22c55e; color: white; border-color: #22c55e; }
-    .content-tab.active-movies { background: #3b82f6; color: white; border-color: #3b82f6; }
-    .content-tab.active-series { background: #eab308; color: white; border-color: #eab308; }
-
+    .content-tab:hover {
+      border-color: var(--accent);
+      color: var(--text-primary);
+    }
+    .content-tab.active-live { background: var(--tab-live); color: white; border-color: var(--tab-live); }
+    .content-tab.active-movies { background: var(--tab-movies); color: white; border-color: var(--tab-movies); }
+    .content-tab.active-series { background: var(--tab-series); color: white; border-color: var(--tab-series); }
     .channel-category-row {
       display: flex;
       flex-wrap: wrap;
@@ -313,9 +265,10 @@
       padding: 4px 2px;
       flex: 1;
     }
-    .category-list::-webkit-scrollbar { width: 4px; }
-    .category-list::-webkit-scrollbar-thumb { background: #2563eb; border-radius: 20px; }
+    .category-list::-webkit-scrollbar { width: 4px; background: var(--bg-input); border-radius: 20px; }
+    .category-list::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 20px; }
     .category-chip {
+      background: var(--bg-input);
       padding: 6px 16px;
       border-radius: 30px;
       font-size: 0.8rem;
@@ -323,11 +276,11 @@
       cursor: pointer;
       border: 1px solid transparent;
       transition: 0.1s;
+      color: var(--text-primary);
       white-space: nowrap;
     }
-    .category-chip:focus-visible { outline: 2px solid #2563eb; }
-    .category-chip.active { background: #2563eb; color: white; border-color: #2563eb; }
-
+    .category-chip:focus-visible { outline: 2px solid var(--accent); }
+    .category-chip.active { background: var(--accent); color: white; border-color: var(--accent); }
     .channel-list-container { position: relative; margin-top: 8px; }
     .channel-list {
       display: flex;
@@ -337,19 +290,21 @@
       overflow-y: auto;
       padding: 6px 2px;
     }
-    .channel-list::-webkit-scrollbar { width: 4px; }
-    .channel-list::-webkit-scrollbar-thumb { background: #2563eb; border-radius: 20px; }
+    .channel-list::-webkit-scrollbar { width: 4px; background: var(--bg-input); border-radius: 20px; }
+    .channel-list::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 20px; }
     .channel-item {
+      background: var(--bg-input);
       padding: 4px 16px;
       border-radius: 30px;
       font-size: 0.8rem;
       cursor: pointer;
       border: 1px solid transparent;
       transition: 0.1s;
+      color: var(--text-primary);
       white-space: nowrap;
     }
-    .channel-item:focus-visible { outline: 2px solid #2563eb; }
-    .channel-item.active { background: #2563eb; color: white; border-color: #2563eb; }
+    .channel-item:focus-visible { outline: 2px solid var(--accent); }
+    .channel-item.active { background: var(--accent); color: white; border-color: var(--accent); }
     .channel-item .badge {
       font-size: 0.6rem;
       padding: 1px 6px;
@@ -357,85 +312,80 @@
       margin-left: 4px;
       font-weight: 700;
     }
-    .badge-live { background: #22c55e; color: white; }
-    .badge-movie { background: #3b82f6; color: white; }
-    .badge-series { background: #eab308; color: white; }
-
+    .badge-live { background: var(--tab-live); color: white; }
+    .badge-movie { background: var(--tab-movies); color: white; }
+    .badge-series { background: var(--tab-series); color: white; }
     .back-panel-btn {
+      background: var(--bg-input);
       border: none;
       border-radius: 40px;
       padding: 8px 22px;
       font-weight: 500;
+      color: var(--text-primary);
       cursor: pointer;
       margin-top: 6px;
     }
-    .back-panel-btn:focus-visible { outline: 2px solid #2563eb; }
+    .back-panel-btn:focus-visible { outline: 2px solid var(--accent); }
     .back-btn {
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      border: 1px solid #ddd;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
       border-radius: 30px;
       padding: 4px 14px;
       font-size: 0.75rem;
       font-weight: 500;
+      color: var(--text-primary);
       cursor: pointer;
       margin: 4px 0;
     }
-    body.dark .back-btn { border-color: #1a2744; color: #e0e0e0; }
-    .back-btn:hover { background: rgba(0,0,0,0.05); }
-
+    .back-btn:hover { background: var(--bg-hover); }
     @media (max-width: 700px) { .flex-row { flex-direction: column; } #app { padding: 16px; } }
-    *:focus-visible { outline: 3px solid #2563eb !important; outline-offset: 2px; }
+    *:focus-visible { outline: 3px solid var(--accent) !important; outline-offset: 2px; }
     button, input, .category-chip, .channel-item { cursor: pointer; }
     .hidden { display: none; }
-
     .loading-spinner {
       display: inline-block;
       width: 20px;
       height: 20px;
-      border: 3px solid rgba(0,0,0,0.1);
+      border: 3px solid var(--bg-input);
       border-radius: 50%;
-      border-top-color: #2563eb;
+      border-top-color: var(--accent);
       animation: spin 1s ease-in-out infinite;
       margin-right: 8px;
     }
-    body.dark .loading-spinner { border-color: rgba(255,255,255,0.1); border-top-color: #2563eb; }
     @keyframes spin { to { transform: rotate(360deg); } }
-
     .error-message {
-      background: #fee2e2;
-      color: #991b1b;
+      background: var(--error-bg);
+      color: var(--error-text);
       padding: 10px 16px;
       border-radius: 12px;
       margin: 8px 0;
       font-size: 0.9rem;
     }
-    body.dark .error-message { background: #7f1d1d; color: #fca5a5; }
     .success-message {
-      background: #dcfce7;
-      color: #166534;
+      background: var(--success-bg);
+      color: var(--success-text);
       padding: 10px 16px;
       border-radius: 12px;
       margin: 8px 0;
       font-size: 0.9rem;
     }
-    body.dark .success-message { background: #064e3b; color: #86efac; }
     .warning-message {
-      background: #fef3c7;
-      color: #92400e;
+      background: var(--warning-bg);
+      color: var(--warning-text);
       padding: 10px 16px;
       border-radius: 12px;
       margin: 8px 0;
       font-size: 0.9rem;
     }
-    body.dark .warning-message { background: #78350f; color: #fcd34d; }
-
     .status-text {
       display: flex;
       align-items: center;
       gap: 8px;
       font-size: 0.85rem;
+      color: var(--text-secondary);
     }
     .video-overlay {
       position: absolute;
@@ -453,13 +403,14 @@
       display: none;
     }
     .video-overlay.show { display: block; }
-
     .debug-info {
+      background: var(--bg-input);
       border-radius: 12px;
       padding: 8px 12px;
       margin-top: 8px;
       font-size: 0.7rem;
       font-family: monospace;
+      color: var(--text-secondary);
       max-height: 200px;
       overflow-y: auto;
       white-space: pre-wrap;
@@ -468,35 +419,33 @@
     .progress-bar-container {
       width: 100%;
       height: 6px;
-      background: #e2e8f0;
+      background: var(--progress-bg);
       border-radius: 10px;
       margin: 8px 0;
       overflow: hidden;
       display: none;
     }
-    body.dark .progress-bar-container { background: #334155; }
     .progress-bar-container.active { display: block; }
     .progress-bar {
       height: 100%;
-      background: #2563eb;
+      background: var(--accent);
       border-radius: 10px;
       transition: width 0.3s ease;
       width: 0%;
     }
-
     .load-more-btn {
-      border: 1px solid #ddd;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
       border-radius: 30px;
       padding: 4px 16px;
       font-size: 0.75rem;
+      color: var(--text-primary);
       cursor: pointer;
       margin-top: 4px;
     }
-    body.dark .load-more-btn { border-color: #1a2744; color: #e0e0e0; }
-    .load-more-btn:focus-visible { outline: 2px solid #2563eb; }
+    .load-more-btn:focus-visible { outline: 2px solid var(--accent); }
     .load-more-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .channel-count { font-size: 0.75rem; margin-left: 8px; }
-
+    .channel-count { font-size: 0.75rem; color: var(--text-secondary); margin-left: 8px; }
     .connection-test {
       display: flex;
       gap: 8px;
@@ -504,14 +453,15 @@
       flex-wrap: wrap;
     }
     .connection-test button {
-      border: 1px solid #ddd;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
       border-radius: 20px;
       padding: 4px 12px;
       font-size: 0.7rem;
       cursor: pointer;
+      color: var(--text-primary);
     }
-    body.dark .connection-test button { border-color: #1a2744; color: #e0e0e0; }
-    .connection-test button:hover { background: rgba(0,0,0,0.05); }
+    .connection-test button:hover { background: var(--bg-hover); }
     .status-dot {
       display: inline-block;
       width: 10px;
@@ -522,20 +472,19 @@
     .status-dot.green { background: #22c55e; }
     .status-dot.red { background: #ef4444; }
     .status-dot.yellow { background: #eab308; }
-
     .account-info-row {
       display: flex;
       flex-wrap: wrap;
       gap: 8px 16px;
       padding: 8px 0;
       font-size: 0.8rem;
-      border-top: 1px solid #ddd;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border-color);
       margin-top: 8px;
     }
-    body.dark .account-info-row { border-color: #1a2744; }
-    .account-info-row .label { font-weight: 600; }
-
+    .account-info-row .label { font-weight: 600; color: var(--text-primary); }
     .stream-url-box {
+      background: var(--bg-input);
       padding: 4px 8px;
       border-radius: 4px;
       font-size: 0.65rem;
@@ -545,7 +494,6 @@
       overflow-y: auto;
       margin-top: 4px;
     }
-
     .episode-list {
       display: flex;
       flex-direction: column;
@@ -556,68 +504,41 @@
     }
     .episode-item {
       padding: 6px 12px;
+      background: var(--bg-input);
       border-radius: 8px;
       cursor: pointer;
       font-size: 0.8rem;
       border: 1px solid transparent;
       transition: 0.1s;
+      color: var(--text-primary);
     }
-    .episode-item:hover { border-color: #2563eb; }
-    .episode-item.active { background: #2563eb; color: white; border-color: #2563eb; }
+    .episode-item:hover { border-color: var(--accent); }
+    .episode-item.active { background: var(--accent); color: white; border-color: var(--accent); }
     .episode-item .ep-info {
       font-size: 0.7rem;
+      color: var(--text-secondary);
       margin-left: 8px;
-      opacity: 0.7;
     }
-
     .warning-box {
+      background: var(--warning-bg);
+      color: var(--warning-text);
       padding: 8px 12px;
       border-radius: 8px;
       margin: 4px 0;
       font-size: 0.8rem;
       border-left: 3px solid #eab308;
     }
-    .now-playing {
-      display: flex;
-      align-items: center;
-      margin: 10px auto;
-      max-width: 720px;
-      width: 100%;
-      padding: 8px 14px;
-      border-radius: 8px;
-      border: 1px solid #e0e0e0;
-      flex-shrink: 0;
-    }
-    body.dark .now-playing { border-color: #1a2744; }
-    .now-playing > * + * { margin-left: 10px; }
-    .np-poster {
-      width: 42px;
-      height: 42px;
-      background: #e94560;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      overflow: hidden;
-    }
-    .np-poster img { width: 100%; height: 100%; object-fit: cover; }
-    .np-info { flex: 1; min-width: 0; }
-    .np-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .np-status { font-size: 11px; margin-top: 1px; }
   </style>
 </head>
 <body>
 <div id="app">
-  <!-- HEADER -->
   <div class="header-bar">
     <h1>📺 IPTV Oynatıcı</h1>
-    <button class="theme-btn" id="themeToggle" tabindex="0">
+    <button class="theme-btn" id="themeToggle" tabindex="0" aria-label="Tema değiştir">
       <span id="themeIcon">☀️</span> <span id="themeLabel">Aydınlık</span>
     </button>
   </div>
 
-  <!-- PANEL EKRANI -->
   <div id="panelSection">
     <div class="flex-row">
       <div class="flex-col">
@@ -650,7 +571,7 @@
           <div class="card-title">ℹ️ Bilgi</div>
           <div class="warning-box">
             ⚠️ URL sonunda <b>/</b> olmalıdır.<br>
-            401 hatası alıyorsanız URL, kullanıcı veya şifreyi kontrol edin.
+            Örnek: http://sunucu.com:8080/
           </div>
         </div>
       </div>
@@ -669,7 +590,6 @@
     </div>
   </div>
 
-  <!-- PLAYER EKRANI -->
   <div id="playerSection">
     <div class="video-wrapper">
       <video id="videoPlayer" controls="false" playsinline></video>
@@ -738,8 +658,7 @@
   // THEME
   // ============================================================
   function setTheme(theme) {
-    var body = document.body;
-    body.className = theme;
+    document.documentElement.setAttribute('data-theme', theme);
     var icon = document.getElementById('themeIcon');
     var label = document.getElementById('themeLabel');
     if (theme === 'dark') {
@@ -751,12 +670,10 @@
     }
     try { localStorage.setItem('iptv-theme', theme); } catch(e) {}
   }
-
   function toggleTheme() {
-    var current = document.body.className || 'light';
+    var current = document.documentElement.getAttribute('data-theme') || 'light';
     setTheme(current === 'light' ? 'dark' : 'light');
   }
-
   var savedTheme = null;
   try { savedTheme = localStorage.getItem('iptv-theme'); } catch(e) {}
   setTheme(savedTheme || 'light');
@@ -836,6 +753,7 @@
   var retryCount = 0;
   var MAX_RETRIES = 3;
   var seriesDataCache = {};
+  var hls = null;
 
   // ============================================================
   // DOM REFS
@@ -1066,9 +984,9 @@
         var data = JSON.parse(text);
         if (data.user_info) {
           showAccountInfo(data);
-          testResult.innerHTML = '<span class="status-dot green"></span> ✅ API bağlantısı başarılı!<br>👤 ' + data.user_info.username + ' | ' + data.user_info.status;
+          testResult.innerHTML = '<span class="status-dot green"></span> ✅ API bağlantısı başarılı!<br>👤 ' + data.user_info.username;
         } else {
-          testResult.innerHTML = '<span class="status-dot yellow"></span> ⚠️ API yanıtı alındı ama kullanıcı bilgisi yok.';
+          testResult.innerHTML = '<span class="status-dot yellow"></span> ⚠️ API yanıtı alındı.';
         }
         addDebugLog('✅ API başarılı!');
       } catch(e) {
@@ -1089,7 +1007,6 @@
       html += '<span><span class="label">Kullanıcı:</span> ' + escHtml(ui.username) + '</span>';
       html += '<span><span class="label">Durum:</span> ' + escHtml(ui.status) + '</span>';
       html += '<span><span class="label">Bitiş:</span> ' + formatDate(ui.exp_date) + '</span>';
-      html += '<span><span class="label">Bağlantı:</span> ' + (ui.active_cons || '0') + '/' + (ui.max_connections || '1') + '</span>';
     }
     accountInfoDisplay.innerHTML = html;
   }
@@ -1610,8 +1527,8 @@
     streamInfoBox.style.display = 'block';
     streamInfoBox.textContent = '🔗 ' + streamUrl;
     
-    // LG TV için native oynat
-    playNativeVideo(streamUrl, episode.name);
+    // Xtream Baba'daki oynatma fonksiyonunu kullan
+    playWithHLS(streamUrl, episode.name);
   }
 
   // ============================================================
@@ -1632,7 +1549,7 @@
   });
 
   // ============================================================
-  // PLAY FUNCTIONS - LG TV OPTİMİZE (SADECE NATIVE)
+  // PLAY FUNCTIONS - XTREAM BABA'DAN ALINDI
   // ============================================================
   function playItem(item) {
     if (!item || !currentAccount) return;
@@ -1672,97 +1589,228 @@
     streamInfoBox.style.display = 'block';
     streamInfoBox.textContent = '🔗 ' + streamUrl;
     
-    // LG TV'de SADECE native oynat (HLS.js kullanma)
-    playNativeVideo(streamUrl, itemName);
+    // Xtream Baba'daki oynatma fonksiyonunu kullan
+    playWithHLS(streamUrl, itemName);
   }
 
   // ============================================================
-  // NATIVE VIDEO - LG TV İÇİN
+  // XTREAM BABA'DAN ALINAN HLS OYNATMA FONKSİYONU
   // ============================================================
-  function playNativeVideo(url, name) {
-    addDebugLog('Native video ile oynatılıyor: ' + url);
-    
-    // Mevcut oynatmayı durdur
+  function playWithHLS(url, name) {
+    // Önceki oynatmayı durdur
     stopVideo();
-    
-    // Video elementini hazırla
     video.removeAttribute('src');
     video.load();
+
+    addDebugLog('HLS.js ile oynatılıyor: ' + url);
     
-    // LG TV için M3U8 ve MP4 desteği
-    // webOS yerel oynatıcı M3U8 ve MP4 destekler
-    video.src = url;
-    video.load();
+    // LG TV kontrolü - webOS media service kullan
+    var isWebOS = (typeof webOS !== 'undefined' && webOS.platform && webOS.platform.tv);
+    var userAgent = navigator.userAgent.toLowerCase();
+    var isOldBrowser = userAgent.indexOf('chromium/34') >= 0 || userAgent.indexOf('chrome/34') >= 0;
     
-    // Oynatmayı dene
+    addDebugLog('isWebOS: ' + isWebOS + ', isOldBrowser: ' + isOldBrowser);
+    
+    // LG TV ise webOS media service dene
+    if (isWebOS && url.indexOf('.m3u8') > 0) {
+      addDebugLog('LG TV webOS media service deneniyor...');
+      playWithWebOS(url, name);
+      return;
+    }
+    
+    // Eski tarayıcı veya HLS.js desteklenmiyorsa native dene
+    if (typeof Hls === 'undefined' || !Hls.isSupported()) {
+      addDebugLog('HLS.js desteklenmiyor, native video deneniyor');
+      playNativeVideo(url, name);
+      return;
+    }
+
     try {
-      var playPromise = video.play();
-      if (playPromise && typeof playPromise.catch === 'function') {
-        playPromise.then(function() {
-          addDebugLog('✅ Native video başladı');
-          setStatus('Yayın başladı', false);
-          hideOverlay();
-          isPlaying = true;
-          playPauseBtn.textContent = '⏸️ Durdur';
-          retryCount = 0;
-        }).catch(function(error) {
-          addDebugLog('❌ Native video hatası: ' + error.message);
+      hls = new Hls({
+        enableWorker: false,
+        lowLatencyMode: false,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        maxBufferSize: 60 * 1000 * 1000,
+        backbufferLength: 30,
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 10,
+        fragLoadingTimeOut: 30000,
+        manifestLoadingTimeOut: 20000,
+        levelLoadingTimeOut: 20000,
+        debug: false,
+        xhrSetup: function(xhr, reqUrl) {
+          xhr.withCredentials = false;
+          xhr.timeout = 60000;
+        }
+      });
+
+      hls.loadSource(url);
+      hls.attachMedia(video);
+
+      var manifestLoaded = false;
+      var loadTimeout = setTimeout(function() {
+        if (!manifestLoaded) {
+          addDebugLog('⏱️ Manifest zaman aşımı');
+          if (hls) { hls.destroy(); hls = null; }
+          
           if (retryCount < MAX_RETRIES) {
             retryCount++;
             addDebugLog('Yeniden deneme ' + retryCount + '/' + MAX_RETRIES);
-            setTimeout(function() { playNativeVideo(url, name); }, 2000);
+            setTimeout(function() { playWithHLS(url, name); }, 3000);
           } else {
-            hideOverlay();
-            showError('Yayın başlatılamadı: ' + error.message);
+            playNativeVideo(url, name);
           }
+        }
+      }, 25000);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, function() {
+        manifestLoaded = true;
+        clearTimeout(loadTimeout);
+        setStatus('Yayın başladı', false);
+        hideOverlay();
+        addDebugLog('✅ HLS manifest yüklendi');
+        
+        video.play().catch(function(e) {
+          addDebugLog('Otomatik oynatma engellendi: ' + e.message);
+          setStatus('Oynatmak için tıklayın', false);
         });
-      }
-    } catch(e) {
-      addDebugLog('Native oynatma hatası: ' + e.message);
-      hideOverlay();
-      showError('Yayın başlatılamadı: ' + e.message);
+        isPlaying = true;
+        playPauseBtn.textContent = '⏸️ Durdur';
+        retryCount = 0;
+      });
+
+      hls.on(Hls.Events.ERROR, function(evt, data) {
+        if (data.fatal) {
+          addDebugLog('⚠️ HLS fatal hata: ' + data.details);
+          if (hls) { hls.destroy(); hls = null; }
+          clearTimeout(loadTimeout);
+          
+          if (retryCount < MAX_RETRIES) {
+            retryCount++;
+            addDebugLog('Yeniden deneme ' + retryCount + '/' + MAX_RETRIES);
+            setTimeout(function() { playWithHLS(url, name); }, 3000);
+          } else {
+            playNativeVideo(url, name);
+          }
+        } else {
+          addDebugLog('HLS uyarı: ' + data.details);
+        }
+      });
+
+    } catch (e) {
+      addDebugLog('HLS hatası: ' + e.message);
+      playNativeVideo(url, name);
     }
+  }
+
+  // ============================================================
+  // LG WEBOS MEDIA SERVICE - XTREAM BABA'DAN ALINDI
+  // ============================================================
+  function playWithWebOS(url, name) {
+    addDebugLog('WebOS media service başlatılıyor...');
     
-    // Video olayları
+    if (typeof webOS === 'undefined' || !webOS.service) {
+      addDebugLog('WebOS service yok, native video deneniyor');
+      playNativeVideo(url, name);
+      return;
+    }
+
+    var mediaId = null;
+
+    try {
+      // webOS service ile media aç
+      var request = new webOS.service.request('luna://com.webos.media', {
+        method: 'open',
+        parameters: {
+          target: url,
+          option: 'background'
+        },
+        onSuccess: function(response) {
+          addDebugLog('WebOS open başarılı: ' + JSON.stringify(response));
+          if (response && response.mediaId) {
+            mediaId = response.mediaId;
+            // Media'yı oynat
+            var playRequest = new webOS.service.request('luna://com.webos.media', {
+              method: 'play',
+              parameters: {
+                mediaId: mediaId
+              },
+              onSuccess: function() {
+                addDebugLog('✅ WebOS media oynatılıyor');
+                setStatus('Yayın başladı', false);
+                hideOverlay();
+                isPlaying = true;
+                playPauseBtn.textContent = '⏸️ Durdur';
+              },
+              onFailure: function(error) {
+                addDebugLog('WebOS play hatası: ' + JSON.stringify(error));
+                playNativeVideo(url, name);
+              }
+            });
+          } else {
+            addDebugLog('WebOS open başarısız: mediaId yok');
+            playNativeVideo(url, name);
+          }
+        },
+        onFailure: function(error) {
+          addDebugLog('WebOS open hatası: ' + JSON.stringify(error));
+          playNativeVideo(url, name);
+        }
+      });
+    } catch(e) {
+      addDebugLog('WebOS hatası: ' + e.message);
+      playNativeVideo(url, name);
+    }
+  }
+
+  // ============================================================
+  // NATIVE VIDEO - XTREAM BABA'DAN ALINDI
+  // ============================================================
+  function playNativeVideo(url, name) {
+    addDebugLog('Native video ile oynatılıyor: ' + url);
+    if (hls) { try { hls.destroy(); } catch(e) {} hls = null; }
+    
+    video.removeAttribute('src');
+    video.load();
+    video.src = url;
+    video.load();
+    
+    video.play().then(function() {
+      addDebugLog('✅ Native video başladı');
+      setStatus('Yayın başladı', false);
+      hideOverlay();
+      isPlaying = true;
+      playPauseBtn.textContent = '⏸️ Durdur';
+    }).catch(function(error) {
+      addDebugLog('❌ Native video hatası: ' + error.message);
+      if (retryCount < MAX_RETRIES) {
+        retryCount++;
+        addDebugLog('Yeniden deneme ' + retryCount + '/' + MAX_RETRIES);
+        setTimeout(function() { playNativeVideo(url, name); }, 3000);
+      } else {
+        hideOverlay();
+        showError('Yayın başlatılamadı: ' + error.message);
+      }
+    });
+    
     video.onplaying = function() {
       addDebugLog('✅ Native video playing');
       setStatus('Yayın başladı', false);
       hideOverlay();
       isPlaying = true;
       playPauseBtn.textContent = '⏸️ Durdur';
-      retryCount = 0;
     };
     
     video.onerror = function() {
       var err = video.error;
       var msg = err ? 'Kod: ' + err.code : 'Bilinmeyen hata';
       addDebugLog('❌ Native video error: ' + msg);
-      
-      if (retryCount < MAX_RETRIES) {
-        retryCount++;
-        addDebugLog('Yeniden deneme ' + retryCount + '/' + MAX_RETRIES);
-        setTimeout(function() { playNativeVideo(url, name); }, 2000);
-      } else {
-        hideOverlay();
-        showError('Yayın hatası: ' + msg);
-      }
     };
-    
-    // Zaman aşımı kontrolü
-    setTimeout(function() {
-      if (!isPlaying && !video.ended) {
-        addDebugLog('⏱️ Native video zaman aşımı');
-        if (retryCount < MAX_RETRIES) {
-          retryCount++;
-          addDebugLog('Yeniden deneme ' + retryCount + '/' + MAX_RETRIES);
-          setTimeout(function() { playNativeVideo(url, name); }, 2000);
-        }
-      }
-    }, 15000);
   }
 
   function stopVideo() {
-    // video elementini temizle
+    if (hls) { try { hls.destroy(); } catch(e) {} hls = null; }
     video.pause();
     video.removeAttribute('src');
     video.load();
@@ -1915,9 +1963,9 @@
   // ============================================================
   // INIT
   // ============================================================
-  addDebugLog('=== IPTV Oynatıcı Başlatıldı (LG TV Native) ===');
+  addDebugLog('=== IPTV Oynatıcı Başlatıldı (Xtream Baba Oynatma) ===');
   addDebugLog('Tarayıcı: ' + navigator.userAgent);
-  addDebugLog('HLS.js: Kullanılmıyor (Native video)');
+  addDebugLog('HLS.js: ' + (typeof Hls !== 'undefined' ? 'Yüklendi' : 'Yüklenemedi'));
 
   loadAccounts();
   setupContentTabs();
@@ -1930,7 +1978,7 @@
     addDebugLog('Global hata: ' + (e.message || e));
   }, true);
 
-  console.log('✅ LG TV IPTV Oynatıcı hazır (Native video)');
+  console.log('✅ IPTV Oynatıcı hazır (Xtream Baba oynatma)');
 })();
 </script>
 </body>
