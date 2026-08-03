@@ -2,1182 +2,444 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>LG IPTV Oynatıcı</title>
-  <!-- HLS.js - CDN'den yükleme -->
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@0.14.17/dist/hls.min.js" crossorigin="anonymous"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LG Smart TV IPTV Player</title>
+  <!-- HLS.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <style>
-    * {
+    :root {
+      --bg-color: #121212;
+      --text-color: #ffffff;
+      --panel-bg: #1e1e1e;
+      --active-bg: #e50914;
+      --focus-border: 3px solid #f5c518;
+    }
+
+    body.light-theme {
+      --bg-color: #f4f4f9;
+      --text-color: #121212;
+      --panel-bg: #ffffff;
+      --active-bg: #007bff;
+      --focus-border: 3px solid #0056b3;
+    }
+
+    * { box-sizing: border-box; }
+    body, html {
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
-      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-    }
-    body {
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      transition: background 0.2s, color 0.2s;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 12px;
-    }
-    /* TEMA DEĞİŞKENLERİ */
-    :root {
-      --bg-primary: #f5f7fa;
-      --bg-secondary: #ffffff;
-      --bg-input: #eef1f5;
-      --bg-hover: #e0e4eb;
-      --text-primary: #1e293b;
-      --text-secondary: #334155;
-      --border-color: #cbd5e1;
-      --shadow: 0 8px 20px rgba(0,0,0,0.08);
-      --player-bg: #0b0e14;
-      --accent: #2563eb;
-      --accent-hover: #1d4ed8;
-      --card-bg: #ffffff;
-      --error-bg: #fee2e2;
-      --error-text: #991b1b;
-      --success-bg: #dcfce7;
-      --success-text: #166534;
-    }
-    [data-theme="dark"] {
-      --bg-primary: #0f172a;
-      --bg-secondary: #1e293b;
-      --bg-input: #2d3a4f;
-      --bg-hover: #334155;
-      --text-primary: #f1f5f9;
-      --text-secondary: #cbd5e1;
-      --border-color: #475569;
-      --shadow: 0 8px 20px rgba(0,0,0,0.5);
-      --card-bg: #1e293b;
-      --accent: #3b82f6;
-      --accent-hover: #2563eb;
-      --error-bg: #7f1d1d;
-      --error-text: #fca5a5;
-      --success-bg: #064e3b;
-      --success-text: #86efac;
-    }
-    /* Genel Layout */
-    #app {
-      width: 100%;
-      max-width: 1380px;
-      background: var(--bg-secondary);
-      border-radius: 32px;
-      box-shadow: var(--shadow);
-      padding: 20px 24px 28px;
-      transition: background 0.2s;
-    }
-    .flex-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 24px;
-    }
-    .flex-col {
-      flex: 1 1 280px;
-      min-width: 240px;
-    }
-    /* Başlık & Tema */
-    .header-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .header-bar h1 {
-      font-size: 1.8rem;
-      font-weight: 600;
-      letter-spacing: -0.3px;
-      color: var(--text-primary);
-    }
-    .theme-btn {
-      background: var(--bg-input);
-      border: none;
-      border-radius: 40px;
-      padding: 10px 18px;
-      font-size: 1.6rem;
-      line-height: 1;
-      cursor: pointer;
-      color: var(--text-primary);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-      transition: 0.15s;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-weight: 500;
-    }
-    .theme-btn:focus-visible {
-      outline: 3px solid var(--accent);
-      outline-offset: 2px;
-    }
-    .theme-btn span {
-      font-size: 0.9rem;
-      font-weight: 400;
-    }
-    /* Kartlar */
-    .card {
-      background: var(--card-bg);
-      border-radius: 24px;
-      padding: 18px 20px 22px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-      border: 1px solid var(--border-color);
-      transition: background 0.2s, border 0.2s;
-    }
-    .card-title {
-      font-weight: 600;
-      font-size: 1.1rem;
-      margin-bottom: 16px;
-      color: var(--text-primary);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    /* Form */
-    .form-group {
-      margin-bottom: 14px;
-    }
-    .form-group label {
-      display: block;
-      font-size: 0.8rem;
-      font-weight: 500;
-      color: var(--text-secondary);
-      margin-bottom: 4px;
-      letter-spacing: 0.3px;
-    }
-    .form-group input {
-      width: 100%;
-      padding: 12px 14px;
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      background: var(--bg-input);
-      color: var(--text-primary);
-      font-size: 0.95rem;
-      transition: 0.15s;
-    }
-    .form-group input:focus {
-      outline: 2px solid var(--accent);
-      border-color: transparent;
-    }
-    .btn {
-      background: var(--accent);
-      border: none;
-      border-radius: 40px;
-      padding: 12px 18px;
-      font-weight: 600;
-      color: white;
-      font-size: 0.95rem;
-      cursor: pointer;
-      transition: 0.15s;
-      width: 100%;
-      letter-spacing: 0.3px;
-    }
-    .btn:hover {
-      background: var(--accent-hover);
-    }
-    .btn:focus-visible {
-      outline: 3px solid var(--accent);
-      outline-offset: 2px;
-    }
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    /* Hesap listesi */
-    .account-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--bg-input);
-      padding: 10px 14px;
-      border-radius: 40px;
-      margin-bottom: 10px;
-      flex-wrap: wrap;
-      gap: 8px;
-      border: 1px solid transparent;
-      transition: 0.1s;
-    }
-    .account-item:focus-within {
-      border-color: var(--accent);
-    }
-    .account-info {
-      display: flex;
-      flex-direction: column;
-      font-size: 0.85rem;
-      flex: 1;
-      min-width: 120px;
-    }
-    .account-info .url {
-      font-weight: 500;
-      color: var(--text-primary);
-    }
-    .account-info .user {
-      color: var(--text-secondary);
-      font-size: 0.75rem;
-    }
-    .account-actions {
-      display: flex;
-      gap: 6px;
-    }
-    .account-actions button {
-      background: transparent;
-      border: 1px solid var(--border-color);
-      border-radius: 30px;
-      padding: 4px 12px;
-      font-size: 0.7rem;
-      font-weight: 500;
-      cursor: pointer;
-      color: var(--text-primary);
-      transition: 0.1s;
-    }
-    .account-actions button:focus-visible {
-      outline: 2px solid var(--accent);
-    }
-    .account-actions .play-btn {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: white;
-    }
-    .account-actions .play-btn:hover {
-      background: var(--accent-hover);
-    }
-    .account-actions .delete-btn {
-      background: #ef4444;
-      border-color: #ef4444;
-      color: white;
-    }
-    .account-actions .delete-btn:hover {
-      background: #dc2626;
-    }
-    .empty-text {
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-      padding: 6px 0;
-      opacity: 0.7;
-    }
-    /* Video Player */
-    #player-section {
-      margin-top: 24px;
-      border-top: 2px solid var(--border-color);
-      padding-top: 24px;
-      display: none;
-    }
-    #player-section.active {
-      display: block;
-    }
-    .video-wrapper {
-      background: var(--player-bg);
-      border-radius: 28px;
-      overflow: hidden;
-      position: relative;
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      max-height: 70vh;
-    }
-    #videoPlayer {
       width: 100%;
       height: 100%;
-      display: block;
-      background: #0b0e14;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: Arial, sans-serif;
+      overflow: hidden;
     }
-    .player-controls {
+
+    /* Kumanda Focus Stili */
+    :focus {
+      outline: var(--focus-border) !important;
+      background-color: var(--active-bg) !important;
+      color: #fff !important;
+    }
+
+    .screen { display: none; width: 100%; height: 100%; }
+    .screen.active { display: flex; }
+
+    /* PANEL EKRANI */
+    #panel-screen {
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    .header {
       display: flex;
-      flex-wrap: wrap;
+      justify-content: space-between;
       align-items: center;
-      gap: 12px 18px;
-      margin-top: 16px;
-      padding: 8px 4px;
+      margin-bottom: 20px;
     }
-    .player-controls button {
-      background: var(--bg-input);
-      border: none;
-      border-radius: 40px;
-      padding: 8px 18px;
-      font-weight: 500;
-      color: var(--text-primary);
-      cursor: pointer;
-      font-size: 0.9rem;
-    }
-    .player-controls button:focus-visible {
-      outline: 2px solid var(--accent);
-    }
-    .player-controls input[type="range"] {
+
+    .main-content {
+      display: flex;
       flex: 1;
-      min-width: 80px;
-      accent-color: var(--accent);
-      background: var(--bg-input);
-      height: 4px;
-      border-radius: 20px;
+      gap: 20px;
     }
-    .channel-category-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px 20px;
-      margin-top: 14px;
-      align-items: center;
+
+    .form-section, .list-section {
+      flex: 1;
+      background: var(--panel-bg);
+      padding: 20px;
+      border-radius: 8px;
     }
-    .category-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
+
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 12px;
+      border: 1px solid #444;
+      border-radius: 4px;
+      background: #2a2a2a;
+      color: #fff;
+      font-size: 16px;
     }
-    .category-chip {
-      background: var(--bg-input);
-      padding: 6px 16px;
-      border-radius: 30px;
-      font-size: 0.8rem;
-      font-weight: 500;
-      cursor: pointer;
-      border: 1px solid transparent;
-      transition: 0.1s;
-      color: var(--text-primary);
-    }
-    .category-chip:focus-visible {
-      outline: 2px solid var(--accent);
-    }
-    .category-chip.active {
-      background: var(--accent);
-      color: white;
-      border-color: var(--accent);
-    }
-    .channel-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 8px;
-      max-height: 150px;
-      overflow-y: auto;
-      padding: 6px 2px;
-    }
-    .channel-item {
-      background: var(--bg-input);
-      padding: 4px 16px;
-      border-radius: 30px;
-      font-size: 0.8rem;
-      cursor: pointer;
-      border: 1px solid transparent;
-      transition: 0.1s;
-      color: var(--text-primary);
-    }
-    .channel-item:focus-visible {
-      outline: 2px solid var(--accent);
-    }
-    .channel-item.active {
-      background: var(--accent);
-      color: white;
-      border-color: var(--accent);
-    }
-    .back-panel-btn {
-      background: var(--bg-input);
-      border: none;
-      border-radius: 40px;
-      padding: 8px 22px;
-      font-weight: 500;
-      color: var(--text-primary);
-      cursor: pointer;
-      margin-top: 6px;
-    }
-    .back-panel-btn:focus-visible {
-      outline: 2px solid var(--accent);
-    }
-    /* scroll */
-    .channel-list::-webkit-scrollbar {
-      width: 4px;
-      background: var(--bg-input);
-      border-radius: 20px;
-    }
-    .channel-list::-webkit-scrollbar-thumb {
-      background: var(--accent);
-      border-radius: 20px;
-    }
-    /* responsive */
-    @media (max-width: 700px) {
-      .flex-row { flex-direction: column; }
-      #app { padding: 16px; }
-    }
-    /* focus visible for TV */
-    *:focus-visible {
-      outline: 3px solid var(--accent) !important;
-      outline-offset: 2px;
-    }
-    button, input, .category-chip, .channel-item {
+
+    .account-item {
+      padding: 12px;
+      margin-bottom: 8px;
+      background: #2a2a2a;
+      border-radius: 4px;
       cursor: pointer;
     }
-    .hidden { display: none; }
-    
-    /* Loading ve hata mesajları */
-    .loading-spinner {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 3px solid var(--bg-input);
-      border-radius: 50%;
-      border-top-color: var(--accent);
-      animation: spin 1s ease-in-out infinite;
-      margin-right: 8px;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    .error-message {
-      background: var(--error-bg);
-      color: var(--error-text);
-      padding: 10px 16px;
-      border-radius: 12px;
-      margin: 8px 0;
-      font-size: 0.9rem;
-    }
-    .success-message {
-      background: var(--success-bg);
-      color: var(--success-text);
-      padding: 10px 16px;
-      border-radius: 12px;
-      margin: 8px 0;
-      font-size: 0.9rem;
-    }
-    .status-text {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-    }
-    .video-overlay {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: white;
-      font-size: 1.2rem;
-      text-align: center;
-      background: rgba(0,0,0,0.6);
-      padding: 16px 24px;
-      border-radius: 12px;
-      pointer-events: none;
-      z-index: 10;
+
+    /* PLAYER EKRANI */
+    #player-screen {
       display: none;
+      flex-direction: row;
+      position: relative;
     }
-    .video-overlay.show {
-      display: block;
+
+    .sidebar {
+      width: 300px;
+      background: var(--panel-bg);
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+    }
+
+    .list-container {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .item-btn {
+      width: 100%;
+      text-align: left;
+      padding: 12px;
+      border: none;
+      background: transparent;
+      color: var(--text-color);
+      border-bottom: 1px solid #333;
+    }
+
+    .video-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #000;
+      position: relative;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+    }
+
+    .player-controls {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .player-controls button {
+      width: auto;
+      margin-bottom: 0;
     }
   </style>
 </head>
 <body>
-<div id="app">
-  <div class="header-bar">
-    <h1>📺 IPTV Oynatıcı</h1>
-    <button class="theme-btn" id="themeToggle" tabindex="0" aria-label="Tema değiştir">
-      <span id="themeIcon">☀️</span> <span id="themeLabel">Aydınlık</span>
-    </button>
-  </div>
 
-  <!-- PANEL EKRANI -->
-  <div id="panelSection">
-    <div class="flex-row">
-      <!-- Sol: hesap formu -->
-      <div class="flex-col">
-        <div class="card">
-          <div class="card-title">➕ Hesap Ekle</div>
-          <div class="form-group">
-            <label>Xtream URL</label>
-            <input type="text" id="inputUrl" placeholder="http://example.com:80" tabindex="0">
-          </div>
-          <div class="form-group">
-            <label>Kullanıcı Adı</label>
-            <input type="text" id="inputUser" placeholder="kullanici" tabindex="0">
-          </div>
-          <div class="form-group">
-            <label>Şifre</label>
-            <input type="password" id="inputPass" placeholder="••••••" tabindex="0">
-          </div>
-          <button class="btn" id="addAccountBtn" tabindex="0">Hesap Kaydet</button>
-          <div id="formStatus" style="margin-top:8px;font-size:0.8rem;"></div>
-        </div>
-        <div class="card" style="margin-top:16px;">
-          <div class="card-title">ℹ️ Bilgi</div>
-          <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.5;">
-            Xtream Codes API ile uyumlu IPTV servislerinizi ekleyin. 
-            URL, kullanıcı adı ve şifre bilgilerinizi girerek kaydedin.
-            Kaydettiğiniz hesapları "Oynat" butonu ile izlemeye başlayın.
-          </p>
-        </div>
+  <!-- 1. PANEL EKRANI -->
+  <div id="panel-screen" class="screen active">
+    <div class="header">
+      <h2>LG Smart TV IPTV Player</h2>
+      <button id="theme-toggle" tabindex="1">Tema Değiştir (☀️/🌙)</button>
+    </div>
+    <div class="main-content">
+      <div class="form-section">
+        <h3>Hesap Ekle</h3>
+        <input type="text" id="iptv-url" placeholder="Sunucu URL (http://domain.com:8080)" tabindex="2">
+        <input type="text" id="iptv-user" placeholder="Kullanıcı Adı" tabindex="3">
+        <input type="password" id="iptv-pass" placeholder="Şifre" tabindex="4">
+        <button id="save-btn" tabindex="5">Kaydet ve Bağlan</button>
       </div>
-      <!-- Sağ: kayıtlı hesaplar -->
-      <div class="flex-col">
-        <div class="card">
-          <div class="card-title">📋 Kayıtlı Hesaplar</div>
-          <div id="accountListContainer">
-            <div class="empty-text">Henüz hesap eklenmemiş.</div>
-          </div>
-        </div>
+      <div class="list-section">
+        <h3>Kayıtlı Hesaplar</h3>
+        <div id="accounts-list"></div>
       </div>
     </div>
   </div>
 
-  <!-- VIDEO OYNATICI EKRANI -->
-  <div id="playerSection">
-    <div class="video-wrapper">
-      <video id="videoPlayer" controls="false" playsinline></video>
-      <div id="videoOverlay" class="video-overlay">📡 Yayın başlatılıyor...</div>
+  <!-- 2. VIDEO PLAYER EKRANI -->
+  <div id="player-screen" class="screen">
+    <div class="sidebar">
+      <button id="back-btn" tabindex="6">← Panele Dön</button>
+      <h3>Kategoriler</h3>
+      <div id="category-list" class="list-container"></div>
     </div>
-    <div class="player-controls">
-      <button id="playPauseBtn" tabindex="0">⏸️ Durdur</button>
-      <button id="stopBtn" tabindex="0">⏹️ Durdur</button>
-      <input type="range" id="seekSlider" min="0" max="100" value="0" step="0.1" tabindex="0">
-      <span id="timeDisplay">0:00 / 0:00</span>
-      <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="0.8" tabindex="0" style="width:90px;">
-      <span id="playerStatus" class="status-text"></span>
+    <div class="sidebar">
+      <h3>Kanallar</h3>
+      <div id="channel-list" class="list-container"></div>
     </div>
-    <div class="channel-category-row">
-      <span style="font-weight:500;">Kategoriler:</span>
-      <div class="category-list" id="categoryList">
-        <span class="empty-text">Kategori yok</span>
+    <div class="video-container">
+      <video id="video-player" controls></video>
+      <div class="player-controls">
+        <button id="btn-play" tabindex="7">Oynat / Durdur</button>
+        <button id="btn-vol-down" tabindex="8">Ses -</button>
+        <button id="btn-vol-up" tabindex="9">Ses +</button>
       </div>
     </div>
-    <div style="margin-top:6px;">
-      <span style="font-weight:500;">Kanallar:</span>
-      <div class="channel-list" id="channelList">
-        <span class="empty-text">Kanal yok</span>
-      </div>
-    </div>
-    <button class="back-panel-btn" id="backToPanelBtn" tabindex="0">⬅️ Panel'e Dön</button>
   </div>
-</div>
 
-<script>
-  (function() {
-    "use strict";
-    
-    // ----- State -----
-    var accounts = [];
+  <script>
+    // ES5 UYUMLU JAVASCRIPT
+
+    // Değişken Tanımlamaları (var kullanımı)
     var currentAccount = null;
-    var categories = [];
-    var channels = [];
-    var currentCategory = null;
-    var currentChannel = null;
-    var hls = null;
-    var video = document.getElementById('videoPlayer');
-    var isPlaying = false;
-    var isLoading = false;
+    var hlsPlayer = null;
+    var videoEl = document.getElementById('video-player');
 
-    // ----- DOM References -----
-    var panelSection = document.getElementById('panelSection');
-    var playerSection = document.getElementById('playerSection');
-    var accountListContainer = document.getElementById('accountListContainer');
-    var videoOverlay = document.getElementById('videoOverlay');
+    // DOM Elemanları
+    var panelScreen = document.getElementById('panel-screen');
+    var playerScreen = document.getElementById('player-screen');
+    var accountsListEl = document.getElementById('accounts-list');
+    var categoryListEl = document.getElementById('category-list');
+    var channelListEl = document.getElementById('channel-list');
 
-    var inputUrl = document.getElementById('inputUrl');
-    var inputUser = document.getElementById('inputUser');
-    var inputPass = document.getElementById('inputPass');
-    var addBtn = document.getElementById('addAccountBtn');
-    var formStatus = document.getElementById('formStatus');
-
-    var playPauseBtn = document.getElementById('playPauseBtn');
-    var stopBtn = document.getElementById('stopBtn');
-    var seekSlider = document.getElementById('seekSlider');
-    var volumeSlider = document.getElementById('volumeSlider');
-    var timeDisplay = document.getElementById('timeDisplay');
-    var backToPanelBtn = document.getElementById('backToPanelBtn');
-    var categoryList = document.getElementById('categoryList');
-    var channelList = document.getElementById('channelList');
-    var themeToggle = document.getElementById('themeToggle');
-    var themeIcon = document.getElementById('themeIcon');
-    var themeLabel = document.getElementById('themeLabel');
-    var playerStatus = document.getElementById('playerStatus');
-
-    // ----- Tema Fonksiyonları -----
-    function getTheme() {
-      return document.documentElement.getAttribute('data-theme') || 'light';
-    }
-    
-    function setTheme(theme) {
-      if (theme === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        themeIcon.textContent = '🌙';
-        themeLabel.textContent = 'Koyu';
-      } else {
-        document.documentElement.removeAttribute('data-theme');
-        themeIcon.textContent = '☀️';
-        themeLabel.textContent = 'Aydınlık';
-      }
-      try {
-        localStorage.setItem('iptv-theme', theme);
-      } catch (e) {
-        // localStorage olmayabilir
-      }
-    }
-    
-    function toggleTheme() {
-      var current = getTheme();
-      setTheme(current === 'light' ? 'dark' : 'light');
-    }
-    
-    // Tema başlatma
-    var savedTheme = null;
-    try {
-      savedTheme = localStorage.getItem('iptv-theme');
-    } catch (e) {}
-    if (savedTheme) {
-      setTheme(savedTheme);
-    } else {
-      setTheme('light');
-    }
-    themeToggle.addEventListener('click', toggleTheme);
-
-    // ----- localStorage Account İşlemleri -----
-    function loadAccounts() {
-      try {
-        var stored = localStorage.getItem('iptv-accounts');
-        if (stored) {
-          var parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
-            accounts = parsed;
-          }
-        }
-      } catch (e) {
-        accounts = [];
-      }
-      renderAccountList();
-    }
-    
-    function saveAccounts() {
-      try {
-        localStorage.setItem('iptv-accounts', JSON.stringify(accounts));
-      } catch (e) {
-        console.warn('Hesap kaydedilemedi:', e);
-      }
-      renderAccountList();
-    }
-
-    // ----- Hesap Listesini Render Et -----
-    function renderAccountList() {
-      var container = accountListContainer;
-      if (!accounts || accounts.length === 0) {
-        container.innerHTML = '<div class="empty-text">Henüz hesap eklenmemiş.</div>';
-        return;
-      }
-      var html = '';
-      for (var i = 0; i < accounts.length; i++) {
-        var acc = accounts[i];
-        html += '<div class="account-item" data-index="' + i + '">';
-        html += '<div class="account-info"><span class="url">' + escHtml(acc.url) + '</span>';
-        html += '<span class="user">👤 ' + escHtml(acc.user) + '</span></div>';
-        html += '<div class="account-actions">';
-        html += '<button class="play-btn" data-index="' + i + '" tabindex="0">▶️ Oynat</button>';
-        html += '<button class="delete-btn" data-index="' + i + '" tabindex="0">🗑️ Sil</button>';
-        html += '</div></div>';
-      }
-      container.innerHTML = html;
-
-      // Event binding
-      var playBtns = container.querySelectorAll('.play-btn');
-      for (var j = 0; j < playBtns.length; j++) {
-        (function(btn) {
-          btn.addEventListener('click', function() {
-            var idx = parseInt(this.getAttribute('data-index'), 10);
-            if (!isNaN(idx) && accounts[idx]) {
-              playAccount(accounts[idx]);
-            }
-          });
-        })(playBtns[j]);
-      }
-      
-      var delBtns = container.querySelectorAll('.delete-btn');
-      for (var k = 0; k < delBtns.length; k++) {
-        (function(btn) {
-          btn.addEventListener('click', function() {
-            var idx = parseInt(this.getAttribute('data-index'), 10);
-            if (!isNaN(idx) && accounts[idx]) {
-              if (confirm('Bu hesabı silmek istediğinize emin misiniz?')) {
-                accounts.splice(idx, 1);
-                saveAccounts();
-              }
-            }
-          });
-        })(delBtns[k]);
-      }
-    }
-
-    function escHtml(str) {
-      if (!str) return '';
-      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
-
-    // ----- Hesap Ekleme -----
-    function addAccount() {
-      var url = inputUrl.value.trim();
-      var user = inputUser.value.trim();
-      var pass = inputPass.value.trim();
-      
-      if (!url || !user || !pass) {
-        formStatus.innerHTML = '<div class="error-message">⚠️ Lütfen tüm alanları doldurun.</div>';
-        return;
-      }
-      
-      if (url.indexOf('http') !== 0) {
-        formStatus.innerHTML = '<div class="error-message">⚠️ URL http:// veya https:// ile başlamalı</div>';
-        return;
-      }
-      
-      // Aynı hesap var mı kontrol et
-      for (var i = 0; i < accounts.length; i++) {
-        if (accounts[i].url === url && accounts[i].user === user) {
-          formStatus.innerHTML = '<div class="error-message">⚠️ Bu hesap zaten kayıtlı.</div>';
-          return;
-        }
-      }
-      
-      accounts.push({ url: url, user: user, pass: pass });
-      saveAccounts();
-      
-      inputUrl.value = '';
-      inputUser.value = '';
-      inputPass.value = '';
-      
-      formStatus.innerHTML = '<div class="success-message">✅ Hesap başarıyla eklendi!</div>';
-      setTimeout(function() {
-        formStatus.innerHTML = '';
-      }, 3000);
-    }
-    addBtn.addEventListener('click', addAccount);
-
-    // Enter tuşu ile form gönderme
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') {
-        var active = document.activeElement;
-        if (active === inputUrl || active === inputUser || active === inputPass) {
-          addAccount();
-        }
-      }
+    // 1. TEMA DEĞİŞTİRME (Dark/Light)
+    document.getElementById('theme-toggle').addEventListener('click', function() {
+      document.body.classList.toggle('light-theme');
     });
 
-    // ----- Video Oynatma Fonksiyonları -----
-    function showOverlay(text) {
-      videoOverlay.textContent = text;
-      videoOverlay.classList.add('show');
-    }
-    
-    function hideOverlay() {
-      videoOverlay.classList.remove('show');
-    }
-
-    function playAccount(acc) {
-      if (!acc) return;
-      
-      // Önceki yayını durdur
-      stopVideo();
-      
-      currentAccount = acc;
-      setStatus('Kategoriler yükleniyor...', true);
-      showOverlay('📡 Kategoriler yükleniyor...');
-      
-      fetchCategories(acc.url, acc.user, acc.pass, function(err, cats) {
-        setStatus('', false);
-        if (err) {
-          hideOverlay();
-          showError('Kategoriler alınamadı: ' + err);
-          return;
-        }
-        
-        categories = cats || [];
-        showPlayerScreen();
-        renderCategories(categories);
-        
-        if (categories.length > 0) {
-          selectCategory(categories[0].category_id);
-        } else {
-          channels = [];
-          renderChannels([]);
-          setStatus('Kategori bulunamadı', false);
-          hideOverlay();
-        }
-      });
-    }
-
-    function fetchCategories(baseUrl, user, pass, callback) {
-      var url = baseUrl + '/player_api.php?username=' + encodeURIComponent(user) + '&password=' + encodeURIComponent(pass);
+    // 2. XMLHttpRequest WRAPPER (ES5)
+    function makeRequest(url, callback) {
       var xhr = new XMLHttpRequest();
       xhr.open('GET', url, true);
-      xhr.timeout = 15000;
-      
       xhr.onreadystatechange = function() {
         if (xhr.readyState === 4) {
-          if (xhr.status >= 200 && xhr.status < 300) {
+          if (xhr.status === 200) {
             try {
               var data = JSON.parse(xhr.responseText);
-              var liveCats = data && data.categories && data.categories.live ? data.categories.live : [];
-              callback(null, liveCats);
-            } catch (e) {
-              callback('JSON parse hatası: ' + e.message, null);
+              callback(null, data);
+            } catch(e) {
+              callback('JSON ayrıştırma hatası', null);
             }
           } else {
-            callback('HTTP ' + xhr.status + ' - ' + (xhr.statusText || 'Bilinmeyen hata'), null);
+            callback('Bağlantı hatası: ' + xhr.status, null);
           }
         }
       };
-      
-      xhr.onerror = function() { 
-        callback('Ağ bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.', null); 
-      };
-      
-      xhr.ontimeout = function() { 
-        callback('Bağlantı zaman aşımı. Sunucuya ulaşılamıyor.', null); 
-      };
-      
       xhr.send();
     }
 
-    function fetchChannels(baseUrl, user, pass, categoryId, callback) {
-      var url = baseUrl + '/player_api.php?username=' + encodeURIComponent(user) + '&password=' + encodeURIComponent(pass) + '&category_id=' + encodeURIComponent(categoryId);
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', url, true);
-      xhr.timeout = 15000;
+    // 3. HESAP YÖNETİMİ (localStorage)
+    function loadAccounts() {
+      accountsListEl.innerHTML = '';
+      var accounts = JSON.parse(localStorage.getItem('iptv_accounts') || '[]');
       
-      xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4) {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              var data = JSON.parse(xhr.responseText);
-              var list = data && data.live ? data.live : [];
-              callback(null, list);
-            } catch (e) {
-              callback('JSON parse hatası', null);
-            }
-          } else {
-            callback('HTTP ' + xhr.status, null);
-          }
-        }
-      };
-      
-      xhr.onerror = function() { 
-        callback('Ağ bağlantı hatası', null); 
-      };
-      
-      xhr.ontimeout = function() { 
-        callback('Bağlantı zaman aşımı', null); 
-      };
-      
-      xhr.send();
-    }
+      for (var i = 0; i < accounts.length; i++) {
+        var acc = accounts[i];
+        var btn = document.createElement('button');
+        btn.className = 'account-item item-btn';
+        btn.setAttribute('tabindex', (10 + i).toString());
+        btn.innerHTML = acc.user + ' (' + acc.url + ')';
+        
+        // ES5 Kapanış (Closure) Mantığı
+        (function(accountData) {
+          btn.addEventListener('click', function() {
+            connectAccount(accountData);
+          });
+        })(acc);
 
-    function selectCategory(categoryId) {
-      if (!currentAccount) return;
-      currentCategory = categoryId;
-      setStatus('Kanallar yükleniyor...', true);
-      showOverlay('📡 Kanallar yükleniyor...');
-      
-      fetchChannels(currentAccount.url, currentAccount.user, currentAccount.pass, categoryId, function(err, chs) {
-        setStatus('', false);
-        if (err) {
-          hideOverlay();
-          showError('Kanallar alınamadı: ' + err);
-          return;
-        }
-        
-        channels = chs || [];
-        renderChannels(channels);
-        
-        if (channels.length > 0) {
-          playChannel(channels[0]);
-        } else {
-          stopVideo();
-          setStatus('Bu kategoride kanal yok', false);
-          hideOverlay();
-        }
-      });
-      
-      // Kategori aktif durumu
-      var chips = categoryList.querySelectorAll('.category-chip');
-      for (var i = 0; i < chips.length; i++) {
-        var chip = chips[i];
-        var id = chip.getAttribute('data-category-id');
-        if (id === String(categoryId)) {
-          chip.classList.add('active');
-        } else {
-          chip.classList.remove('active');
-        }
+        accountsListEl.appendChild(btn);
       }
     }
 
-    function playChannel(channel) {
-      if (!channel || !currentAccount) return;
-      currentChannel = channel;
-      var streamUrl = currentAccount.url + '/live/' + currentAccount.user + '/' + currentAccount.pass + '/' + channel.stream_id + '.m3u8';
-      setStatus('Yayın başlatılıyor...', true);
-      showOverlay('📺 ' + channel.name + ' yükleniyor...');
-      playStream(streamUrl);
+    document.getElementById('save-btn').addEventListener('click', function() {
+      var url = document.getElementById('iptv-url').value.trim();
+      var user = document.getElementById('iptv-user').value.trim();
+      var pass = document.getElementById('iptv-pass').value.trim();
+
+      if (!url || !user || !pass) {
+        alert('Lütfen tüm alanları doldurun!');
+        return;
+      }
+
+      var accounts = JSON.parse(localStorage.getItem('iptv_accounts') || '[]');
+      var newAccount = { url: url, user: user, pass: pass };
+      accounts.push(newAccount);
+      localStorage.setItem('iptv_accounts', JSON.stringify(accounts));
+
+      // Formu Temizle
+      document.getElementById('iptv-url').value = '';
+      document.getElementById('iptv-user').value = '';
+      document.getElementById('iptv-pass').value = '';
+
+      loadAccounts();
+      connectAccount(newAccount);
+    });
+
+    // 4. XTREAM CODES API BAĞLANTISI
+    function connectAccount(acc) {
+      currentAccount = acc;
+      var authUrl = acc.url + '/player_api.php?username=' + acc.user + '&password=' + acc.pass;
+
+      makeRequest(authUrl, function(err, response) {
+        if (err || (response && response.user_info && response.user_info.auth === 0)) {
+          alert('Giriş başarısız! Bilgileri kontrol edin.');
+          return;
+        }
+
+        // Ekran Değiştir
+        panelScreen.classList.remove('active');
+        playerScreen.classList.add('active');
+
+        loadCategories();
+      });
     }
 
-    function playStream(url) {
-      stopVideo();
-      video.removeAttribute('src');
-      video.load();
+    // 5. KATEGORİ VE KANALLARI YÜKLE
+    function loadCategories() {
+      var catUrl = currentAccount.url + '/player_api.php?username=' + currentAccount.user + 
+                     '&password=' + currentAccount.pass + '&action=get_live_categories';
+      
+      makeRequest(catUrl, function(err, categories) {
+        if (err) return;
+        categoryListEl.innerHTML = '';
+        
+        for (var i = 0; i < categories.length; i++) {
+          var cat = categories[i];
+          var btn = document.createElement('button');
+          btn.className = 'item-btn';
+          btn.setAttribute('tabindex', (100 + i).toString());
+          btn.innerText = cat.category_name;
 
-      // HLS.js kontrolü
-      if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-        try {
-          hls = new Hls({
-            enableWorker: true,
-            lowLatencyMode: true,
-            debug: false
-          });
-          
-          hls.loadSource(url);
-          hls.attachMedia(video);
-          
-          hls.on(Hls.Events.MANIFEST_PARSED, function() {
-            setStatus('Yayın başladı', false);
-            hideOverlay();
-            video.play().catch(function(e) {
-              console.warn('Otomatik oynatma engellendi:', e);
-              setStatus('Oynatmak için tıklayın', false);
+          (function(catId) {
+            btn.addEventListener('click', function() {
+              loadChannels(catId);
             });
-            isPlaying = true;
-            playPauseBtn.textContent = '⏸️ Durdur';
-          });
-          
-          hls.on(Hls.Events.ERROR, function(evt, data) {
-            if (data.fatal) {
-              console.warn('HLS hatası:', data);
-              setStatus('Yayın hatası: ' + (data.details || 'bilinmiyor'), false);
-              hideOverlay();
-              showError('Yayın başlatılamadı. Lütfen kanalı tekrar deneyin.');
-            }
-          });
-          
-          hls.on(Hls.Events.LEVEL_LOADED, function() {
-            setStatus('Yayın hazır', false);
-          });
-          
-        } catch (e) {
-          setStatus('HLS hatası: ' + e.message, false);
-          hideOverlay();
-          showError('HLS başlatılamadı: ' + e.message);
+          })(cat.category_id);
+
+          categoryListEl.appendChild(btn);
         }
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        // Safari/WebOS native HLS
-        video.src = url;
-        video.play().catch(function(e) {
-          console.warn('Otomatik oynatma engellendi:', e);
-          setStatus('Oynatmak için tıklayın', false);
+      });
+    }
+
+    function loadChannels(categoryId) {
+      var chanUrl = currentAccount.url + '/player_api.php?username=' + currentAccount.user + 
+                      '&password=' + currentAccount.pass + '&action=get_live_streams&category_id=' + categoryId;
+
+      makeRequest(chanUrl, function(err, channels) {
+        if (err) return;
+        channelListEl.innerHTML = '';
+
+        for (var i = 0; i < channels.length; i++) {
+          var chan = channels[i];
+          var btn = document.createElement('button');
+          btn.className = 'item-btn';
+          btn.setAttribute('tabindex', (1000 + i).toString());
+          btn.innerText = chan.name;
+
+          (function(streamId) {
+            btn.addEventListener('click', function() {
+              playStream(streamId);
+            });
+          })(chan.stream_id);
+
+          channelListEl.appendChild(btn);
+        }
+      });
+    }
+
+    // 6. HLS VIDEO OYNATICI (HLS.js)
+    function playStream(streamId) {
+      // Stream URL Yapısı (Live için .m3u8)
+      var streamUrl = currentAccount.url + '/live/' + currentAccount.user + '/' + currentAccount.pass + '/' + streamId + '.m3u8';
+
+      if (hlsPlayer) {
+        hlsPlayer.destroy();
+      }
+
+      if (Hls.isSupported()) {
+        hlsPlayer = new Hls();
+        hlsPlayer.loadSource(streamUrl);
+        hlsPlayer.attachMedia(videoEl);
+        hlsPlayer.on(Hls.Events.MANIFEST_PARSED, function() {
+          videoEl.play();
         });
-        isPlaying = true;
-        playPauseBtn.textContent = '⏸️ Durdur';
-        setStatus('Yayın başladı (Native HLS)', false);
-        hideOverlay();
-      } else {
-        setStatus('HLS desteklenmiyor', false);
-        hideOverlay();
-        showError('Bu tarayıcı HLS yayınlarını desteklemiyor.');
+      } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+        // Safari / Bazı TV Dahili Oynatıcıları
+        videoEl.src = streamUrl;
+        videoEl.play();
       }
     }
 
     function stopVideo() {
-      if (hls) {
-        try {
-          hls.destroy();
-        } catch (e) {}
-        hls = null;
+      if (hlsPlayer) {
+        hlsPlayer.destroy();
+        hlsPlayer = null;
       }
-      video.pause();
-      video.removeAttribute('src');
-      video.load();
-      isPlaying = false;
-      playPauseBtn.textContent = '▶️ Oynat';
-      seekSlider.value = 0;
-      timeDisplay.textContent = '0:00 / 0:00';
-      setStatus('Durduruldu', false);
-      hideOverlay();
+      videoEl.pause();
+      videoEl.removeAttribute('src');
+      videoEl.load();
     }
 
-    // ----- UI Yardımcıları -----
-    function setStatus(text, loading) {
-      if (text) {
-        playerStatus.innerHTML = (loading ? '<span class="loading-spinner"></span>' : '') + text;
+    // 7. KONTROLLER VE PANEL DÖNÜŞÜ
+    document.getElementById('back-btn').addEventListener('click', function() {
+      stopVideo(); // Panel ekranına dönülünce videoyu durdur
+      playerScreen.classList.remove('active');
+      panelScreen.classList.add('active');
+    });
+
+    document.getElementById('btn-play').addEventListener('click', function() {
+      if (videoEl.paused) {
+        videoEl.play();
       } else {
-        playerStatus.textContent = '';
-      }
-    }
-
-    function showError(msg) {
-      var errorDiv = document.createElement('div');
-      errorDiv.className = 'error-message';
-      errorDiv.textContent = '❌ ' + msg;
-      playerStatus.innerHTML = '';
-      playerStatus.appendChild(errorDiv);
-      setTimeout(function() {
-        if (errorDiv.parentNode) {
-          errorDiv.remove();
-        }
-      }, 10000);
-    }
-
-    // ----- Ekran Geçişleri -----
-    function showPlayerScreen() {
-      panelSection.style.display = 'none';
-      playerSection.classList.add('active');
-      playerSection.style.display = 'block';
-    }
-
-    function showPanelScreen() {
-      stopVideo();
-      playerSection.classList.remove('active');
-      playerSection.style.display = 'none';
-      panelSection.style.display = 'block';
-      categories = [];
-      channels = [];
-      currentCategory = null;
-      currentChannel = null;
-      renderCategories([]);
-      renderChannels([]);
-      setStatus('', false);
-      hideOverlay();
-    }
-
-    backToPanelBtn.addEventListener('click', showPanelScreen);
-
-    // ----- Kategori ve Kanal Render -----
-    function renderCategories(cats) {
-      if (!cats || cats.length === 0) {
-        categoryList.innerHTML = '<span class="empty-text">Kategori yok</span>';
-        return;
-      }
-      var html = '';
-      for (var i = 0; i < cats.length; i++) {
-        var c = cats[i];
-        html += '<span class="category-chip" data-category-id="' + c.category_id + '" tabindex="0">' + escHtml(c.category_name) + '</span>';
-      }
-      categoryList.innerHTML = html;
-      
-      var chips = categoryList.querySelectorAll('.category-chip');
-      for (var j = 0; j < chips.length; j++) {
-        (function(chip) {
-          chip.addEventListener('click', function() {
-            var id = this.getAttribute('data-category-id');
-            if (id) selectCategory(parseInt(id, 10));
-          });
-        })(chips[j]);
-      }
-    }
-
-    function renderChannels(chs) {
-      if (!chs || chs.length === 0) {
-        channelList.innerHTML = '<span class="empty-text">Kanal yok</span>';
-        return;
-      }
-      var html = '';
-      for (var i = 0; i < chs.length; i++) {
-        var ch = chs[i];
-        var activeClass = (currentChannel && currentChannel.stream_id === ch.stream_id) ? 'active' : '';
-        html += '<span class="channel-item ' + activeClass + '" data-stream-id="' + ch.stream_id + '" tabindex="0">' + escHtml(ch.name) + '</span>';
-      }
-      channelList.innerHTML = html;
-      
-      var items = channelList.querySelectorAll('.channel-item');
-      for (var j = 0; j < items.length; j++) {
-        (function(item) {
-          item.addEventListener('click', function() {
-            var id = this.getAttribute('data-stream-id');
-            if (id) {
-              var found = null;
-              for (var k = 0; k < channels.length; k++) {
-                if (String(channels[k].stream_id) === id) { 
-                  found = channels[k]; 
-                  break; 
-                }
-              }
-              if (found) {
-                playChannel(found);
-                // Aktif sınıfını güncelle
-                var all = channelList.querySelectorAll('.channel-item');
-                for (var m = 0; m < all.length; m++) {
-                  all[m].classList.remove('active');
-                }
-                this.classList.add('active');
-              }
-            }
-          });
-        })(items[j]);
-      }
-    }
-
-    // ----- Player Kontrolleri -----
-    playPauseBtn.addEventListener('click', function() {
-      if (video.paused) {
-        video.play().catch(function(e) {
-          console.warn('Oynatma hatası:', e);
-          setStatus('Oynatılamıyor: ' + e.message, false);
-        });
-        isPlaying = true;
-        playPauseBtn.textContent = '⏸️ Durdur';
-      } else {
-        video.pause();
-        isPlaying = false;
-        playPauseBtn.textContent = '▶️ Oynat';
+        videoEl.pause();
       }
     });
 
-    stopBtn.addEventListener('click', function() {
-      stopVideo();
+    document.getElementById('btn-vol-up').addEventListener('click', function() {
+      if (videoEl.volume < 1) videoEl.volume = Math.min(1, videoEl.volume + 0.1);
     });
 
-    video.addEventListener('timeupdate', function() {
-      if (video.duration && !isNaN(video.duration)) {
-        var percent = (video.currentTime / video.duration) * 100;
-        seekSlider.value = percent;
-        timeDisplay.textContent = formatTime(video.currentTime) + ' / ' + formatTime(video.duration);
+    document.getElementById('btn-vol-down').addEventListener('click', function() {
+      if (videoEl.volume > 0) videoEl.volume = Math.max(0, videoEl.volume - 0.1);
+    });
+
+    // 8. TV KUMANDASI YÖN TUŞLARI İLE OYNAŞMA (Focus Navigasyonu)
+    window.addEventListener('keydown', function(e) {
+      var focusable = Array.prototype.slice.call(
+        document.querySelectorAll('button, input, [tabindex]:not([tabindex="-1"])')
+      ).filter(function(el) {
+        return el.offsetParent !== null; // Sadece görünür elemanlar
+      });
+
+      var index = focusable.indexOf(document.activeElement);
+
+      switch(e.keyCode) {
+        case 37: // Sol Ok
+        case 38: // Yukarı Ok
+          if (index > 0) focusable[index - 1].focus();
+          break;
+        case 39: // Sağ Ok
+        case 40: // Aşağı Ok
+          if (index < focusable.length - 1) focusable[index + 1].focus();
+          break;
+        case 461: // LG webOS Geri Tuşu (Back Key)
+          if (playerScreen.classList.contains('active')) {
+            document.getElementById('back-btn').click();
+          }
+          break;
       }
     });
 
-    seekSlider.addEventListener('input', function() {
-      if (video.duration && !isNaN(video.duration)) {
-        var time = (this.value / 100) * video.duration;
-        video.currentTime = time;
-      }
-    });
-
-    volumeSlider.addEventListener('input', function() {
-      video.volume = parseFloat(this.value);
-    });
-    video.volume = 0.8;
-
-    function formatTime(sec) {
-      if (!sec || isNaN(sec) || !isFinite(sec)) return '0:00';
-      var m = Math.floor(sec / 60);
-      var s = Math.floor(sec % 60);
-      return m + ':' + (s < 10 ? '0' : '') + s;
-    }
-
-    // ----- HLS.js Kontrolü -----
-    function checkHLS() {
-      if (typeof Hls === 'undefined') {
-        console.warn('HLS.js yüklenemedi, Native HLS kullanılacak');
-        return false;
-      }
-      return true;
-    }
-
-    // ----- Başlangıç -----
+    // Uygulama Başlangıcı
     loadAccounts();
-    checkHLS();
-
-    // TV için focus desteği
-    document.querySelectorAll('button, input, .category-chip, .channel-item').forEach(function(el) {
-      el.setAttribute('tabindex', '0');
-    });
-
-    // Hata yakalama
-    window.addEventListener('error', function(e) {
-      if (e.target && e.target.tagName === 'SCRIPT') {
-        console.warn('Script yüklenemedi:', e.target.src);
-      }
-    }, true);
-
-    console.log('✅ LG IPTV Oynatıcı hazır');
-    console.log('📺 ' + accounts.length + ' hesap yüklendi');
-  })();
-</script>
+  </script>
 </body>
 </html>
