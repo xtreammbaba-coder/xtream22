@@ -4,13 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>LG IPTV Oynatıcı</title>
-  <!-- HLS.js - LG TV için stabil sürüm -->
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@0.14.17/dist/hls.min.js" crossorigin="anonymous"></script>
   <style>
     /* ============ TEMEL STİLLER ============ */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
-    /* TEMA DEĞİŞKENLERİ - JavaScript ile kontrol edilecek */
+    /* TEMA DEĞİŞKENLERİ */
     body {
       font-family: 'Segoe UI', system-ui, sans-serif;
       transition: background 0.3s, color 0.3s;
@@ -18,7 +16,7 @@
       padding: 12px;
     }
     
-    /* Light Theme (varsayılan) */
+    /* Light Theme */
     body.light {
       background: #f0f2f5;
       color: #1a1a2e;
@@ -108,7 +106,7 @@
     #app {
       width: 100%;
       max-width: 1380px;
-      background: var(--bg-secondary, #ffffff);
+      background: #ffffff;
       border-radius: 32px;
       box-shadow: 0 8px 20px rgba(0,0,0,0.08);
       padding: 20px 24px 28px;
@@ -151,9 +149,11 @@
       border-radius: 24px;
       padding: 18px 20px 22px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-      border: 1px solid var(--border-color, #e0e0e0);
+      border: 1px solid #e0e0e0;
       transition: background 0.2s, border 0.2s;
     }
+    body.dark .card { border-color: #1a2744; }
+    
     .card-title { font-weight: 600; font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
     
     .form-group { margin-bottom: 14px; }
@@ -162,12 +162,13 @@
     .form-group input {
       width: 100%;
       padding: 12px 14px;
-      border: 1px solid var(--border-color, #ddd);
+      border: 1px solid #ddd;
       border-radius: 16px;
       font-size: 0.95rem;
       transition: 0.15s;
       outline: none;
     }
+    body.dark .form-group input { border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); color: #e0e0e0; }
     .form-group input:focus { outline: 2px solid #2563eb; border-color: transparent; }
     
     .btn {
@@ -206,15 +207,16 @@
     .account-actions { display: flex; gap: 6px; }
     .account-actions button {
       background: transparent;
-      border: 1px solid var(--border-color, #ddd);
+      border: 1px solid #ddd;
       border-radius: 30px;
       padding: 4px 12px;
       font-size: 0.7rem;
       font-weight: 500;
       cursor: pointer;
-      color: var(--text-primary, #333);
+      color: #333;
       transition: 0.1s;
     }
+    body.dark .account-actions button { border-color: #1a2744; color: #e0e0e0; }
     .account-actions button:focus-visible { outline: 2px solid #2563eb; }
     .account-actions .play-btn { background: #2563eb; border-color: #2563eb; color: white; }
     .account-actions .play-btn:hover { background: #1d4ed8; }
@@ -225,10 +227,11 @@
 
     #player-section {
       margin-top: 24px;
-      border-top: 2px solid var(--border-color, #e0e0e0);
+      border-top: 2px solid #e0e0e0;
       padding-top: 24px;
       display: none;
     }
+    body.dark #player-section { border-color: #1a2744; }
     #player-section.active { display: block; }
 
     .video-wrapper {
@@ -280,7 +283,7 @@
     }
     .content-tab {
       padding: 6px 18px;
-      border: 2px solid var(--border-color, #ddd);
+      border: 2px solid #ddd;
       border-radius: 30px;
       background: transparent;
       cursor: pointer;
@@ -288,6 +291,7 @@
       font-size: 0.85rem;
       transition: all 0.2s;
     }
+    body.dark .content-tab { border-color: #1a2744; color: #8899bb; }
     .content-tab:hover { border-color: #2563eb; }
     .content-tab.active-live { background: #22c55e; color: white; border-color: #22c55e; }
     .content-tab.active-movies { background: #3b82f6; color: white; border-color: #3b82f6; }
@@ -370,7 +374,7 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      border: 1px solid var(--border-color, #ddd);
+      border: 1px solid #ddd;
       border-radius: 30px;
       padding: 4px 14px;
       font-size: 0.75rem;
@@ -378,6 +382,7 @@
       cursor: pointer;
       margin: 4px 0;
     }
+    body.dark .back-btn { border-color: #1a2744; color: #e0e0e0; }
     .back-btn:hover { background: rgba(0,0,0,0.05); }
 
     @media (max-width: 700px) { .flex-row { flex-direction: column; } #app { padding: 16px; } }
@@ -480,13 +485,14 @@
     }
 
     .load-more-btn {
-      border: 1px solid var(--border-color, #ddd);
+      border: 1px solid #ddd;
       border-radius: 30px;
       padding: 4px 16px;
       font-size: 0.75rem;
       cursor: pointer;
       margin-top: 4px;
     }
+    body.dark .load-more-btn { border-color: #1a2744; color: #e0e0e0; }
     .load-more-btn:focus-visible { outline: 2px solid #2563eb; }
     .load-more-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .channel-count { font-size: 0.75rem; margin-left: 8px; }
@@ -498,12 +504,13 @@
       flex-wrap: wrap;
     }
     .connection-test button {
-      border: 1px solid var(--border-color, #ddd);
+      border: 1px solid #ddd;
       border-radius: 20px;
       padding: 4px 12px;
       font-size: 0.7rem;
       cursor: pointer;
     }
+    body.dark .connection-test button { border-color: #1a2744; color: #e0e0e0; }
     .connection-test button:hover { background: rgba(0,0,0,0.05); }
     .status-dot {
       display: inline-block;
@@ -522,9 +529,10 @@
       gap: 8px 16px;
       padding: 8px 0;
       font-size: 0.8rem;
-      border-top: 1px solid var(--border-color, #ddd);
+      border-top: 1px solid #ddd;
       margin-top: 8px;
     }
+    body.dark .account-info-row { border-color: #1a2744; }
     .account-info-row .label { font-weight: 600; }
 
     .stream-url-box {
@@ -577,9 +585,10 @@
       width: 100%;
       padding: 8px 14px;
       border-radius: 8px;
-      border: 1px solid var(--border-color, #e0e0e0);
+      border: 1px solid #e0e0e0;
       flex-shrink: 0;
     }
+    body.dark .now-playing { border-color: #1a2744; }
     .now-playing > * + * { margin-left: 10px; }
     .np-poster {
       width: 42px;
@@ -726,7 +735,7 @@
   "use strict";
 
   // ============================================================
-  // THEME - body class ile çalışır
+  // THEME
   // ============================================================
   function setTheme(theme) {
     var body = document.body;
@@ -748,7 +757,6 @@
     setTheme(current === 'light' ? 'dark' : 'light');
   }
 
-  // Tema başlat
   var savedTheme = null;
   try { savedTheme = localStorage.getItem('iptv-theme'); } catch(e) {}
   setTheme(savedTheme || 'light');
@@ -778,7 +786,7 @@
   }
 
   // ============================================================
-  // XHR REQUEST - LG TV için optimize
+  // XHR REQUEST
   // ============================================================
   function xhrRequest(method, url, onSuccess, onError, timeout) {
     timeout = timeout || 60000;
@@ -819,7 +827,6 @@
   var displayedItems = [];
   var currentCategory = null;
   var currentItem = null;
-  var hls = null;
   var video = document.getElementById('videoPlayer');
   var isPlaying = false;
   var PAGE_SIZE = 50;
@@ -1603,6 +1610,7 @@
     streamInfoBox.style.display = 'block';
     streamInfoBox.textContent = '🔗 ' + streamUrl;
     
+    // LG TV için native oynat
     playNativeVideo(streamUrl, episode.name);
   }
 
@@ -1624,7 +1632,7 @@
   });
 
   // ============================================================
-  // PLAY FUNCTIONS - LG TV İÇİN OPTİMİZE
+  // PLAY FUNCTIONS - LG TV OPTİMİZE (SADECE NATIVE)
   // ============================================================
   function playItem(item) {
     if (!item || !currentAccount) return;
@@ -1633,22 +1641,18 @@
     
     var streamUrl = '';
     var itemName = item.name || item.title || 'İçerik';
-    var isM3U8 = false;
     
     if (currentContentType === 'live') {
       streamUrl = currentAccount.url + 'live/' + currentAccount.user + '/' + currentAccount.pass + '/' + item.stream_id + '.m3u8';
-      isM3U8 = true;
       addDebugLog('Canlı yayın stream_id: ' + item.stream_id);
     } else if (currentContentType === 'movies') {
       var ext = item.container_extension || 'mp4';
       streamUrl = currentAccount.url + 'movie/' + currentAccount.user + '/' + currentAccount.pass + '/' + item.stream_id + '.' + ext;
-      isM3U8 = (ext === 'm3u8');
       addDebugLog('Film stream_id: ' + item.stream_id + ', uzantı: ' + ext);
     } else if (currentContentType === 'series') {
       if (item.episode_num) {
         var ext = item.container_extension || 'mp4';
         streamUrl = currentAccount.url + 'series/' + currentAccount.user + '/' + currentAccount.pass + '/' + item.id + '.' + ext;
-        isM3U8 = (ext === 'm3u8');
       } else {
         loadSeriesSeasons(item);
         return;
@@ -1663,141 +1667,34 @@
     setStatus('Yayın başlatılıyor...', true);
     showOverlay('📺 ' + itemName + ' yükleniyor...');
     addDebugLog('İçerik oynatılıyor: ' + itemName);
-    addDebugLog('Stream URL: ' + streamUrl + (isM3U8 ? ' (HLS)' : ' (MP4)'));
+    addDebugLog('Stream URL: ' + streamUrl);
     
     streamInfoBox.style.display = 'block';
     streamInfoBox.textContent = '🔗 ' + streamUrl;
     
-    if (isM3U8) {
-      playHLS(streamUrl, itemName);
-    } else {
-      playNativeVideo(streamUrl, itemName);
-    }
+    // LG TV'de SADECE native oynat (HLS.js kullanma)
+    playNativeVideo(streamUrl, itemName);
   }
 
   // ============================================================
-  // HLS.JS İLE OYNAT - LG TV İÇİN OPTİMİZE
-  // ============================================================
-  function playHLS(url, name) {
-    stopVideo();
-    video.removeAttribute('src');
-    video.load();
-
-    addDebugLog('HLS.js ile oynatılıyor: ' + url);
-    
-    // LG TV'de HLS.js desteklenmiyorsa native dene
-    if (typeof Hls === 'undefined' || !Hls.isSupported()) {
-      addDebugLog('❌ HLS.js desteklenmiyor, native deneniyor');
-      playNativeVideo(url, name);
-      return;
-    }
-
-    try {
-      // LG TV için optimize HLS ayarları
-      hls = new Hls({
-        enableWorker: false,  // LG TV'de worker sorun çıkarabilir
-        lowLatencyMode: false,
-        maxBufferLength: 60,
-        maxMaxBufferLength: 120,
-        maxBufferSize: 120 * 1000 * 1000,
-        backbufferLength: 60,
-        liveSyncDurationCount: 5,
-        liveMaxLatencyDurationCount: 15,
-        fragLoadingTimeOut: 30000,
-        manifestLoadingTimeOut: 20000,
-        levelLoadingTimeOut: 20000,
-        debug: false,
-        xhrSetup: function(xhr, reqUrl) {
-          xhr.withCredentials = false;
-          xhr.timeout = 60000;
-        }
-      });
-
-      hls.loadSource(url);
-      hls.attachMedia(video);
-
-      var manifestLoaded = false;
-      var loadTimeout = setTimeout(function() {
-        if (!manifestLoaded) {
-          addDebugLog('⏱️ Manifest zaman aşımı');
-          if (hls) { hls.destroy(); hls = null; }
-          
-          if (retryCount < MAX_RETRIES) {
-            retryCount++;
-            addDebugLog('Yeniden deneme ' + retryCount + '/' + MAX_RETRIES);
-            setTimeout(function() { playHLS(url, name); }, 3000);
-          } else {
-            // HLS başarısız, native dene
-            addDebugLog('HLS başarısız, native deneniyor...');
-            playNativeVideo(url, name);
-          }
-        }
-      }, 25000);
-
-      hls.on(Hls.Events.MANIFEST_PARSED, function() {
-        manifestLoaded = true;
-        clearTimeout(loadTimeout);
-        setStatus('Yayın başladı', false);
-        hideOverlay();
-        addDebugLog('✅ HLS manifest yüklendi');
-        
-        // LG TV'de otomatik oynatmayı dene
-        try {
-          var playPromise = video.play();
-          if (playPromise && typeof playPromise.catch === 'function') {
-            playPromise.catch(function(e) {
-              addDebugLog('Otomatik oynatma engellendi: ' + e.message);
-              setStatus('Oynatmak için tıklayın', false);
-            });
-          }
-        } catch(e) {
-          addDebugLog('Oynatma hatası: ' + e.message);
-        }
-        
-        isPlaying = true;
-        playPauseBtn.textContent = '⏸️ Durdur';
-        retryCount = 0;
-      });
-
-      hls.on(Hls.Events.ERROR, function(evt, data) {
-        if (data.fatal) {
-          addDebugLog('⚠️ HLS fatal hata: ' + data.details);
-          if (hls) { hls.destroy(); hls = null; }
-          clearTimeout(loadTimeout);
-          
-          if (retryCount < MAX_RETRIES) {
-            retryCount++;
-            addDebugLog('Yeniden deneme ' + retryCount + '/' + MAX_RETRIES);
-            setTimeout(function() { playHLS(url, name); }, 3000);
-          } else {
-            // HLS başarısız, native dene
-            addDebugLog('HLS başarısız, native deneniyor...');
-            playNativeVideo(url, name);
-          }
-        } else {
-          addDebugLog('HLS uyarı: ' + data.details);
-        }
-      });
-
-    } catch (e) {
-      addDebugLog('HLS hatası: ' + e.message);
-      playNativeVideo(url, name);
-    }
-  }
-
-  // ============================================================
-  // NATIVE VIDEO İLE OYNAT - LG TV İÇİN
+  // NATIVE VIDEO - LG TV İÇİN
   // ============================================================
   function playNativeVideo(url, name) {
     addDebugLog('Native video ile oynatılıyor: ' + url);
-    if (hls) { try { hls.destroy(); } catch(e) {} hls = null; }
     
+    // Mevcut oynatmayı durdur
+    stopVideo();
+    
+    // Video elementini hazırla
     video.removeAttribute('src');
     video.load();
+    
+    // LG TV için M3U8 ve MP4 desteği
+    // webOS yerel oynatıcı M3U8 ve MP4 destekler
     video.src = url;
     video.load();
     
-    // LG TV'de oynatmayı dene
+    // Oynatmayı dene
     try {
       var playPromise = video.play();
       if (playPromise && typeof playPromise.catch === 'function') {
@@ -1807,12 +1704,13 @@
           hideOverlay();
           isPlaying = true;
           playPauseBtn.textContent = '⏸️ Durdur';
+          retryCount = 0;
         }).catch(function(error) {
           addDebugLog('❌ Native video hatası: ' + error.message);
           if (retryCount < MAX_RETRIES) {
             retryCount++;
             addDebugLog('Yeniden deneme ' + retryCount + '/' + MAX_RETRIES);
-            setTimeout(function() { playNativeVideo(url, name); }, 3000);
+            setTimeout(function() { playNativeVideo(url, name); }, 2000);
           } else {
             hideOverlay();
             showError('Yayın başlatılamadı: ' + error.message);
@@ -1825,37 +1723,46 @@
       showError('Yayın başlatılamadı: ' + e.message);
     }
     
+    // Video olayları
     video.onplaying = function() {
       addDebugLog('✅ Native video playing');
       setStatus('Yayın başladı', false);
       hideOverlay();
       isPlaying = true;
       playPauseBtn.textContent = '⏸️ Durdur';
+      retryCount = 0;
     };
     
     video.onerror = function() {
       var err = video.error;
       var msg = err ? 'Kod: ' + err.code : 'Bilinmeyen hata';
       addDebugLog('❌ Native video error: ' + msg);
-      hideOverlay();
-      showError('Yayın hatası: ' + msg);
+      
+      if (retryCount < MAX_RETRIES) {
+        retryCount++;
+        addDebugLog('Yeniden deneme ' + retryCount + '/' + MAX_RETRIES);
+        setTimeout(function() { playNativeVideo(url, name); }, 2000);
+      } else {
+        hideOverlay();
+        showError('Yayın hatası: ' + msg);
+      }
     };
     
-    // LG TV için zaman aşımı
+    // Zaman aşımı kontrolü
     setTimeout(function() {
       if (!isPlaying && !video.ended) {
         addDebugLog('⏱️ Native video zaman aşımı');
         if (retryCount < MAX_RETRIES) {
           retryCount++;
           addDebugLog('Yeniden deneme ' + retryCount + '/' + MAX_RETRIES);
-          setTimeout(function() { playNativeVideo(url, name); }, 3000);
+          setTimeout(function() { playNativeVideo(url, name); }, 2000);
         }
       }
     }, 15000);
   }
 
   function stopVideo() {
-    if (hls) { try { hls.destroy(); } catch(e) {} hls = null; }
+    // video elementini temizle
     video.pause();
     video.removeAttribute('src');
     video.load();
@@ -2008,9 +1915,9 @@
   // ============================================================
   // INIT
   // ============================================================
-  addDebugLog('=== IPTV Oynatıcı Başlatıldı (LG TV Optimize) ===');
+  addDebugLog('=== IPTV Oynatıcı Başlatıldı (LG TV Native) ===');
   addDebugLog('Tarayıcı: ' + navigator.userAgent);
-  addDebugLog('HLS.js: ' + (typeof Hls !== 'undefined' ? 'Yüklendi' : 'Yüklenemedi'));
+  addDebugLog('HLS.js: Kullanılmıyor (Native video)');
 
   loadAccounts();
   setupContentTabs();
@@ -2023,7 +1930,7 @@
     addDebugLog('Global hata: ' + (e.message || e));
   }, true);
 
-  console.log('✅ LG TV IPTV Oynatıcı hazır');
+  console.log('✅ LG TV IPTV Oynatıcı hazır (Native video)');
 })();
 </script>
 </body>
