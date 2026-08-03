@@ -588,6 +588,22 @@ body.dark .now-playing { border-color:#1a2744; }
 .np-info { flex:1; min-width:0; }
 .np-name { font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .np-status { font-size:11px; margin-top:1px; }
+
+.raw-response {
+  background:#1a1a2e;
+  color:#0f0;
+  padding:8px;
+  border-radius:8px;
+  font-size:0.6rem;
+  font-family:monospace;
+  max-height:300px;
+  overflow-y:auto;
+  white-space:pre-wrap;
+  word-break:break-all;
+  margin-top:8px;
+  display:none;
+}
+body.light .raw-response { background:#f5f5f5; color:#333; }
 </style>
 </head>
 <body>
@@ -625,8 +641,10 @@ body.dark .now-playing { border-color:#1a2744; }
           <div class="connection-test">
             <button id="testConnectionBtn">🔍 Bağlantıyı Test Et</button>
             <button id="testApiBtn">📡 API'yi Test Et</button>
+            <button id="debugApiBtn">🐛 Ham Yanıtı Göster</button>
           </div>
           <div id="testResult" style="margin-top:8px;font-size:0.8rem;"></div>
+          <div id="rawResponseContainer" class="raw-response"></div>
         </div>
       </div>
       <div class="flex-col">
@@ -723,39 +741,71 @@ document.getElementById('themeToggle').addEventListener('click', function(){
 });
 
 // ============================================================
-// WORKER PROXY
+// PROXY YÖNETİMİ - GELİŞTİRİLMİŞ
 // ============================================================
 var WORKER_URL = 'https://small-poetry-287c.f3baba06.workers.dev/?url=';
+var CORS_PROXIES = [
+  'https://corsproxy.io/?',
+  'https://api.allorigins.win/raw?url=',
+  WORKER_URL
+];
 
-function getProxyUrl(url){
+function getProxyUrl(url, useProxy){
   if(typeof url !== 'string') return url;
   if(url.indexOf('http:')!==0 && url.indexOf('https:')!==0) return url;
   if(url.indexOf(WORKER_URL)===0) return url;
   if(url.indexOf('blob:')===0) return url;
   if(url.indexOf('.m3u8')>0 || url.indexOf('/live/')>0 || url.indexOf('/movie/')>0 || url.indexOf('/series/')>0) return url;
+  
+  if(useProxy === false) return url;
   return WORKER_URL + encodeURIComponent(url);
 }
 
 // ============================================================
-// XHR
+// XHR - GELİŞTİRİLMİŞ (PROXY + DOĞRUDAN)
 // ============================================================
-function xhrGet(url, onSuccess, onError, timeout){
+function xhrRequest(url, onSuccess, onError, timeout, useProxy){
   timeout = timeout || 60000;
+  var finalUrl = getProxyUrl(url, useProxy !== false);
+  
+  addDebugLog('İstek: '+finalUrl);
+  
   var xhr = new XMLHttpRequest();
-  xhr.open('GET', url, true);
+  xhr.open('GET', finalUrl, true);
   xhr.timeout = timeout;
-  xhr.setRequestHeader('Accept','application/json');
+  xhr.setRequestHeader('Accept','application/json, text/plain, */*');
+  
   xhr.onreadystatechange = function(){
     if(xhr.readyState===4){
       if(xhr.status>=200 && xhr.status<300){
         if(onSuccess) onSuccess(xhr.responseText);
       }else{
-        if(onError) onError('HTTP '+xhr.status+' - '+(xhr.statusText||'Bilinmeyen hata'));
+        // Proxy başarısız olduysa doğrudan dene
+        if(useProxy !== false && finalUrl !== url){
+          addDebugLog('Proxy başarısız, doğrudan deneniyor...');
+          xhrRequest(url, onSuccess, onError, timeout, false);
+        }else{
+          if(onError) onError('HTTP '+xhr.status+' - '+(xhr.statusText||'Bilinmeyen hata'));
+        }
       }
     }
   };
-  xhr.onerror = function(){ if(onError) onError('Ağ bağlantı hatası!'); };
-  xhr.ontimeout = function(){ if(onError) onError('Bağlantı zaman aşımı!'); };
+  xhr.onerror = function(){
+    if(useProxy !== false && finalUrl !== url){
+      addDebugLog('Proxy ağ hatası, doğrudan deneniyor...');
+      xhrRequest(url, onSuccess, onError, timeout, false);
+    }else{
+      if(onError) onError('Ağ bağlantı hatası!');
+    }
+  };
+  xhr.ontimeout = function(){
+    if(useProxy !== false && finalUrl !== url){
+      addDebugLog('Proxy zaman aşımı, doğrudan deneniyor...');
+      xhrRequest(url, onSuccess, onError, timeout, false);
+    }else{
+      if(onError) onError('Bağlantı zaman aşımı!');
+    }
+  };
   xhr.send(null);
 }
 
@@ -780,6 +830,7 @@ var allItemsLoaded = false;
 var retryCount = 0;
 var MAX_RETRIES = 3;
 var seriesDataCache = {};
+var lastRawResponse = '';
 
 // ============================================================
 // DOM REFS
@@ -792,6 +843,7 @@ var debugContainer = document.getElementById('debugContainer');
 var progressContainer = document.getElementById('progressContainer');
 var progressBar = document.getElementById('progressBar');
 var testResult = document.getElementById('testResult');
+var rawResponseContainer = document.getElementById('rawResponseContainer');
 var accountInfoCard = document.getElementById('accountInfoCard');
 var accountInfoDisplay = document.getElementById('accountInfoDisplay');
 var streamInfoBox = document.getElementById('streamInfoBox');
@@ -822,6 +874,7 @@ var loadMoreBtn = document.getElementById('loadMoreBtn');
 var loadAllBtn = document.getElementById('loadAllBtn');
 var testConnectionBtn = document.getElementById('testConnectionBtn');
 var testApiBtn = document.getElementById('testApiBtn');
+var debugApiBtn = document.getElementById('debugApiBtn');
 var contentTabs = document.querySelectorAll('.content-tab');
 
 // ============================================================
@@ -833,6 +886,12 @@ function addDebugLog(msg){
   debugContainer.textContent += '['+ts+'] '+msg+'\n';
   debugContainer.scrollTop = debugContainer.scrollHeight;
   console.log('[DEBUG]', msg);
+}
+
+function showRawResponse(text){
+  rawResponseContainer.style.display = 'block';
+  rawResponseContainer.textContent = text || 'Boş yanıt';
+  lastRawResponse = text || '';
 }
 
 // ============================================================
@@ -944,8 +1003,7 @@ addBtn.addEventListener('click', addAccount);
 function testConnection(url, callback){
   addDebugLog('Bağlantı testi: '+url);
   testResult.innerHTML = '<span class="status-dot yellow"></span> Bağlantı kontrol ediliyor...';
-  var proxyUrl = getProxyUrl(url);
-  xhrGet('HEAD', proxyUrl, function(){
+  xhrRequest(url, function(){
     addDebugLog('✅ Bağlantı başarılı');
     testResult.innerHTML = '<span class="status-dot green"></span> ✅ Bağlantı başarılı!';
     if(callback) callback(true);
@@ -968,8 +1026,9 @@ function testApi(){
   testResult.innerHTML = '<span class="status-dot yellow"></span> API kontrol ediliyor...';
   addDebugLog('API testi başlatıldı');
   var apiUrl = url+'player_api.php?username='+encodeURIComponent(user)+'&password='+encodeURIComponent(pass);
-  var proxyUrl = getProxyUrl(apiUrl);
-  xhrGet('GET', proxyUrl, function(text){
+  
+  xhrRequest(apiUrl, function(text){
+    showRawResponse(text);
     try{
       var data = JSON.parse(text);
       if(data.user_info){
@@ -978,7 +1037,7 @@ function testApi(){
         accountInfoDisplay.innerHTML = '<span><span class="label">Kullanıcı:</span> '+escHtml(ui.username)+'</span><span><span class="label">Durum:</span> '+escHtml(ui.status)+'</span>';
         testResult.innerHTML = '<span class="status-dot green"></span> ✅ API bağlantısı başarılı!<br>👤 '+ui.username+' | '+ui.status;
       }else{
-        testResult.innerHTML = '<span class="status-dot yellow"></span> ⚠️ API yanıtı alındı.';
+        testResult.innerHTML = '<span class="status-dot yellow"></span> ⚠️ API yanıtı alındı ancak user_info yok.';
       }
       addDebugLog('✅ API başarılı!');
     }catch(e){
@@ -991,12 +1050,34 @@ function testApi(){
   }, 30000);
 }
 
+function debugApi(){
+  var url = inputUrl.value.trim();
+  var user = inputUser.value.trim();
+  var pass = inputPass.value.trim();
+  if(!url || !user || !pass){
+    testResult.innerHTML = '<div class="warning-message">⚠️ Lütfen önce hesap bilgilerini girin.</div>';
+    return;
+  }
+  if(url.lastIndexOf('/')!==url.length-1){ url=url+'/'; inputUrl.value=url; }
+  testResult.innerHTML = '<span class="status-dot yellow"></span> Ham yanıt alınıyor...';
+  var apiUrl = url+'player_api.php?username='+encodeURIComponent(user)+'&password='+encodeURIComponent(pass);
+  
+  xhrRequest(apiUrl, function(text){
+    showRawResponse(text);
+    testResult.innerHTML = '<span class="status-dot green"></span> ✅ Ham yanıt alındı! Aşağıda gösteriliyor.';
+  }, function(err){
+    testResult.innerHTML = '<span class="status-dot red"></span> ❌ '+err;
+    showRawResponse('Hata: '+err);
+  }, 30000);
+}
+
 testConnectionBtn.addEventListener('click', function(){
   var url = inputUrl.value.trim();
   if(!url){ testResult.innerHTML = '<div class="warning-message">⚠️ Lütfen önce URL girin.</div>'; return; }
   testConnection(url);
 });
 testApiBtn.addEventListener('click', testApi);
+debugApiBtn.addEventListener('click', debugApi);
 
 // ============================================================
 // TABS
@@ -1041,7 +1122,7 @@ function switchContentType(type){
 }
 
 // ============================================================
-// CATEGORIES - GELİŞTİRİLMİŞ HATA YÖNETİMİ
+// CATEGORIES
 // ============================================================
 function loadCategories(type){
   if(!currentAccount){ setStatus('Önce bir hesap seçin',false); return; }
@@ -1056,12 +1137,11 @@ function loadCategories(type){
 
   var url = currentAccount.url+'player_api.php?username='+encodeURIComponent(currentAccount.user)+
             '&password='+encodeURIComponent(currentAccount.pass)+'&'+action;
-  var proxyUrl = getProxyUrl(url);
-  addDebugLog('Kategori URL: '+proxyUrl);
+  addDebugLog('Kategori URL: '+url);
 
-  xhrGet('GET', proxyUrl, function(text){
+  xhrRequest(url, function(text){
+    showRawResponse(text);
     try{
-      // Boş veya geçersiz yanıt kontrolü
       if(!text || text.trim()===''){
         addDebugLog('⚠️ Boş yanıt alındı');
         hideOverlay();
@@ -1073,13 +1153,12 @@ function loadCategories(type){
       var data = JSON.parse(text);
       addDebugLog('Kategori yanıtı alındı, uzunluk: '+text.length);
       
-      // Farklı API formatlarını dene
       var cats = null;
       if(Array.isArray(data)){
         cats = data;
       }else if(data && data.categories){
-        if(Array.isArray(data.categories.live)) cats = data.categories.live;
-        else if(Array.isArray(data.categories)) cats = data.categories;
+        if(Array.isArray(data.categories)) cats = data.categories;
+        else if(Array.isArray(data.categories.live)) cats = data.categories.live;
         else if(Array.isArray(data.categories.movies)) cats = data.categories.movies;
         else if(Array.isArray(data.categories.series)) cats = data.categories.series;
       }
@@ -1092,17 +1171,15 @@ function loadCategories(type){
         hideOverlay();
       }else{
         addDebugLog('Kategori yok, tüm içerikler yükleniyor...');
-        // Alternatif: direkt içerikleri al
         loadAllContent(type);
       }
     }catch(e){
       addDebugLog('Kategori parse hatası: '+e.message);
-      // Parse hatasında direkt içerikleri almayı dene
+      hideOverlay();
       loadAllContent(type);
     }
   }, function(err){
     addDebugLog('Kategori hatası: '+err);
-    // Hata durumunda direkt içerikleri al
     loadAllContent(type);
   }, 30000);
 }
@@ -1115,10 +1192,10 @@ function loadAllContent(type){
 
   var url = currentAccount.url+'player_api.php?username='+encodeURIComponent(currentAccount.user)+
             '&password='+encodeURIComponent(currentAccount.pass)+'&'+action;
-  var proxyUrl = getProxyUrl(url);
-  addDebugLog('İçerik URL: '+proxyUrl);
+  addDebugLog('İçerik URL: '+url);
 
-  xhrGet('GET', proxyUrl, function(text){
+  xhrRequest(url, function(text){
+    showRawResponse(text);
     try{
       if(!text || text.trim()===''){
         addDebugLog('⚠️ Boş içerik yanıtı');
@@ -1196,9 +1273,10 @@ function selectCategory(categoryId){
 
   var url = currentAccount.url+'player_api.php?username='+encodeURIComponent(currentAccount.user)+
             '&password='+encodeURIComponent(currentAccount.pass)+'&'+action+'&category_id='+encodeURIComponent(categoryId);
-  var proxyUrl = getProxyUrl(url);
+  addDebugLog('İçerik URL: '+url);
 
-  xhrGet('GET', proxyUrl, function(text){
+  xhrRequest(url, function(text){
+    showRawResponse(text);
     try{
       if(!text || text.trim()===''){
         addDebugLog('⚠️ Boş içerik yanıtı');
@@ -1392,9 +1470,10 @@ function loadSeriesSeasons(series){
 
   var url = currentAccount.url+'player_api.php?username='+encodeURIComponent(currentAccount.user)+
             '&password='+encodeURIComponent(currentAccount.pass)+'&action=get_series_info&series_id='+seriesId;
-  var proxyUrl = getProxyUrl(url);
+  addDebugLog('Sezon URL: '+url);
 
-  xhrGet('GET', proxyUrl, function(text){
+  xhrRequest(url, function(text){
+    showRawResponse(text);
     try{
       if(!text || text.trim()===''){
         addDebugLog('⚠️ Boş sezon yanıtı');
@@ -1555,7 +1634,6 @@ function playStream(url, name){
   video.removeAttribute('src');
   video.load();
 
-  // HLS.js ile dene
   if(typeof Hls !== 'undefined' && Hls.isSupported()){
     try{
       hls = new Hls({
@@ -1770,7 +1848,7 @@ function playAccount(acc){
 // ============================================================
 // INIT
 // ============================================================
-addDebugLog('=== IPTV Oynatıcı Başlatıldı (Parse Hatası Düzeltildi) ===');
+addDebugLog('=== IPTV Oynatıcı Başlatıldı (Ağ Hatası Çözümü) ===');
 addDebugLog('Tarayıcı: '+navigator.userAgent);
 addDebugLog('HLS.js: '+(typeof Hls!=='undefined'?'Yüklendi':'Yüklenemedi'));
 
