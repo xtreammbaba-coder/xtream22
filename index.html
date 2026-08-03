@@ -8,19 +8,22 @@
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <style>
     :root {
-      --bg-color: #121212;
-      --text-color: #ffffff;
-      --panel-bg: #1e1e1e;
-      --active-bg: #e50914;
-      --focus-border: 3px solid #f5c518;
-    }
-
-    body.light-theme {
+      /* Beyaz Tema Ayarları */
       --bg-color: #f4f4f9;
       --text-color: #121212;
       --panel-bg: #ffffff;
+      --card-bg: #e9ecef;
+      --active-bg: #e50914;
+      --focus-border: 3px solid #000000;
+    }
+
+    body.dark-theme {
+      --bg-color: #121212;
+      --text-color: #ffffff;
+      --panel-bg: #1e1e1e;
+      --card-bg: #2a2a2a;
       --active-bg: #007bff;
-      --focus-border: 3px solid #0056b3;
+      --focus-border: 3px solid #f5c518;
     }
 
     * { box-sizing: border-box; }
@@ -35,17 +38,15 @@
       overflow: hidden;
     }
 
-    /* Kumanda Focus Stili */
     :focus {
       outline: var(--focus-border) !important;
       background-color: var(--active-bg) !important;
-      color: #fff !important;
+      color: #ffffff !important;
     }
 
     .screen { display: none; width: 100%; height: 100%; }
     .screen.active { display: flex; }
 
-    /* PANEL EKRANI */
     #panel-screen {
       flex-direction: column;
       padding: 20px;
@@ -69,28 +70,32 @@
       background: var(--panel-bg);
       padding: 20px;
       border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
 
     input, button {
       width: 100%;
       padding: 12px;
       margin-bottom: 12px;
-      border: 1px solid #444;
+      border: 1px solid #ccc;
       border-radius: 4px;
-      background: #2a2a2a;
-      color: #fff;
+      background: var(--card-bg);
+      color: var(--text-color);
       font-size: 16px;
+    }
+
+    input::placeholder {
+      color: #666;
     }
 
     .account-item {
       padding: 12px;
       margin-bottom: 8px;
-      background: #2a2a2a;
+      background: var(--card-bg);
       border-radius: 4px;
       cursor: pointer;
     }
 
-    /* PLAYER EKRANI */
     #player-screen {
       display: none;
       flex-direction: row;
@@ -103,6 +108,7 @@
       display: flex;
       flex-direction: column;
       z-index: 10;
+      border-right: 1px solid #ccc;
     }
 
     .list-container {
@@ -117,7 +123,7 @@
       border: none;
       background: transparent;
       color: var(--text-color);
-      border-bottom: 1px solid #333;
+      border-bottom: 1px solid #ddd;
     }
 
     .video-container {
@@ -148,12 +154,12 @@
     .player-controls button {
       width: auto;
       margin-bottom: 0;
+      color: #fff;
     }
   </style>
 </head>
 <body>
 
-  <!-- 1. PANEL EKRANI -->
   <div id="panel-screen" class="screen active">
     <div class="header">
       <h2>LG Smart TV IPTV Player</h2>
@@ -174,7 +180,6 @@
     </div>
   </div>
 
-  <!-- 2. VIDEO PLAYER EKRANI -->
   <div id="player-screen" class="screen">
     <div class="sidebar">
       <button id="back-btn" tabindex="6">← Panele Dön</button>
@@ -196,26 +201,20 @@
   </div>
 
   <script>
-    // ES5 UYUMLU JAVASCRIPT
-
-    // Değişken Tanımlamaları (var kullanımı)
     var currentAccount = null;
     var hlsPlayer = null;
     var videoEl = document.getElementById('video-player');
 
-    // DOM Elemanları
     var panelScreen = document.getElementById('panel-screen');
     var playerScreen = document.getElementById('player-screen');
     var accountsListEl = document.getElementById('accounts-list');
     var categoryListEl = document.getElementById('category-list');
     var channelListEl = document.getElementById('channel-list');
 
-    // 1. TEMA DEĞİŞTİRME (Dark/Light)
     document.getElementById('theme-toggle').addEventListener('click', function() {
-      document.body.classList.toggle('light-theme');
+      document.body.classList.toggle('dark-theme');
     });
 
-    // 2. XMLHttpRequest WRAPPER (ES5)
     function makeRequest(url, callback) {
       var xhr = new XMLHttpRequest();
       xhr.open('GET', url, true);
@@ -236,7 +235,6 @@
       xhr.send();
     }
 
-    // 3. HESAP YÖNETİMİ (localStorage)
     function loadAccounts() {
       accountsListEl.innerHTML = '';
       var accounts = JSON.parse(localStorage.getItem('iptv_accounts') || '[]');
@@ -248,7 +246,6 @@
         btn.setAttribute('tabindex', (10 + i).toString());
         btn.innerHTML = acc.user + ' (' + acc.url + ')';
         
-        // ES5 Kapanış (Closure) Mantığı
         (function(accountData) {
           btn.addEventListener('click', function() {
             connectAccount(accountData);
@@ -274,7 +271,6 @@
       accounts.push(newAccount);
       localStorage.setItem('iptv_accounts', JSON.stringify(accounts));
 
-      // Formu Temizle
       document.getElementById('iptv-url').value = '';
       document.getElementById('iptv-user').value = '';
       document.getElementById('iptv-pass').value = '';
@@ -283,7 +279,6 @@
       connectAccount(newAccount);
     });
 
-    // 4. XTREAM CODES API BAĞLANTISI
     function connectAccount(acc) {
       currentAccount = acc;
       var authUrl = acc.url + '/player_api.php?username=' + acc.user + '&password=' + acc.pass;
@@ -294,7 +289,6 @@
           return;
         }
 
-        // Ekran Değiştir
         panelScreen.classList.remove('active');
         playerScreen.classList.add('active');
 
@@ -302,7 +296,6 @@
       });
     }
 
-    // 5. KATEGORİ VE KANALLARI YÜKLE
     function loadCategories() {
       var catUrl = currentAccount.url + '/player_api.php?username=' + currentAccount.user + 
                      '&password=' + currentAccount.pass + '&action=get_live_categories';
@@ -355,9 +348,7 @@
       });
     }
 
-    // 6. HLS VIDEO OYNATICI (HLS.js)
     function playStream(streamId) {
-      // Stream URL Yapısı (Live için .m3u8)
       var streamUrl = currentAccount.url + '/live/' + currentAccount.user + '/' + currentAccount.pass + '/' + streamId + '.m3u8';
 
       if (hlsPlayer) {
@@ -372,7 +363,6 @@
           videoEl.play();
         });
       } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-        // Safari / Bazı TV Dahili Oynatıcıları
         videoEl.src = streamUrl;
         videoEl.play();
       }
@@ -388,9 +378,8 @@
       videoEl.load();
     }
 
-    // 7. KONTROLLER VE PANEL DÖNÜŞÜ
     document.getElementById('back-btn').addEventListener('click', function() {
-      stopVideo(); // Panel ekranına dönülünce videoyu durdur
+      stopVideo();
       playerScreen.classList.remove('active');
       panelScreen.classList.add('active');
     });
@@ -411,26 +400,25 @@
       if (videoEl.volume > 0) videoEl.volume = Math.max(0, videoEl.volume - 0.1);
     });
 
-    // 8. TV KUMANDASI YÖN TUŞLARI İLE OYNAŞMA (Focus Navigasyonu)
     window.addEventListener('keydown', function(e) {
       var focusable = Array.prototype.slice.call(
         document.querySelectorAll('button, input, [tabindex]:not([tabindex="-1"])')
       ).filter(function(el) {
-        return el.offsetParent !== null; // Sadece görünür elemanlar
+        return el.offsetParent !== null;
       });
 
       var index = focusable.indexOf(document.activeElement);
 
       switch(e.keyCode) {
-        case 37: // Sol Ok
-        case 38: // Yukarı Ok
+        case 37:
+        case 38:
           if (index > 0) focusable[index - 1].focus();
           break;
-        case 39: // Sağ Ok
-        case 40: // Aşağı Ok
+        case 39:
+        case 40:
           if (index < focusable.length - 1) focusable[index + 1].focus();
           break;
-        case 461: // LG webOS Geri Tuşu (Back Key)
+        case 461:
           if (playerScreen.classList.contains('active')) {
             document.getElementById('back-btn').click();
           }
@@ -438,7 +426,6 @@
       }
     });
 
-    // Uygulama Başlangıcı
     loadAccounts();
   </script>
 </body>
