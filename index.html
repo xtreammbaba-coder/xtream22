@@ -1041,7 +1041,7 @@ function switchContentType(type){
 }
 
 // ============================================================
-// CATEGORIES
+// CATEGORIES - GELİŞTİRİLMİŞ HATA YÖNETİMİ
 // ============================================================
 function loadCategories(type){
   if(!currentAccount){ setStatus('Önce bir hesap seçin',false); return; }
@@ -1061,24 +1061,48 @@ function loadCategories(type){
 
   xhrGet('GET', proxyUrl, function(text){
     try{
+      // Boş veya geçersiz yanıt kontrolü
+      if(!text || text.trim()===''){
+        addDebugLog('⚠️ Boş yanıt alındı');
+        hideOverlay();
+        setStatus('Kategori bulunamadı (boş yanıt)', false);
+        categoryList.innerHTML = '<span class="empty-text">Kategori bulunamadı</span>';
+        return;
+      }
+      
       var data = JSON.parse(text);
       addDebugLog('Kategori yanıtı alındı, uzunluk: '+text.length);
-      if(Array.isArray(data) && data.length>0){
-        categories = data;
+      
+      // Farklı API formatlarını dene
+      var cats = null;
+      if(Array.isArray(data)){
+        cats = data;
+      }else if(data && data.categories){
+        if(Array.isArray(data.categories.live)) cats = data.categories.live;
+        else if(Array.isArray(data.categories)) cats = data.categories;
+        else if(Array.isArray(data.categories.movies)) cats = data.categories.movies;
+        else if(Array.isArray(data.categories.series)) cats = data.categories.series;
+      }
+      
+      if(cats && cats.length>0){
+        categories = cats;
         addDebugLog(categories.length+' kategori bulundu');
         renderCategories(categories);
         if(categories.length>0) selectCategory(categories[0].category_id);
         hideOverlay();
       }else{
         addDebugLog('Kategori yok, tüm içerikler yükleniyor...');
+        // Alternatif: direkt içerikleri al
         loadAllContent(type);
       }
     }catch(e){
       addDebugLog('Kategori parse hatası: '+e.message);
+      // Parse hatasında direkt içerikleri almayı dene
       loadAllContent(type);
     }
   }, function(err){
     addDebugLog('Kategori hatası: '+err);
+    // Hata durumunda direkt içerikleri al
     loadAllContent(type);
   }, 30000);
 }
@@ -1096,8 +1120,28 @@ function loadAllContent(type){
 
   xhrGet('GET', proxyUrl, function(text){
     try{
+      if(!text || text.trim()===''){
+        addDebugLog('⚠️ Boş içerik yanıtı');
+        hideOverlay();
+        setStatus('İçerik bulunamadı', false);
+        channelList.innerHTML = '<span class="empty-text">İçerik yok</span>';
+        return;
+      }
+      
       var data = JSON.parse(text);
-      var items = Array.isArray(data) ? data : [];
+      var items = [];
+      if(Array.isArray(data)){
+        items = data;
+      }else if(data && data.live){
+        items = data.live;
+      }else if(data && data.movies){
+        items = data.movies;
+      }else if(data && data.vod){
+        items = data.vod;
+      }else if(data && data.series){
+        items = data.series;
+      }
+      
       if(items.length>0){
         categories = [{category_id:'all', category_name:'Tüm İçerikler'}];
         allItems = items;
@@ -1108,17 +1152,20 @@ function loadAllContent(type){
         hideOverlay();
       }else{
         hideOverlay();
-        showError('Hiç içerik bulunamadı.');
+        setStatus('Hiç içerik bulunamadı', false);
+        channelList.innerHTML = '<span class="empty-text">İçerik yok</span>';
       }
     }catch(e){
       addDebugLog('İçerik parse hatası: '+e.message);
       hideOverlay();
-      showError('Veri işlenirken hata: '+e.message);
+      setStatus('Veri işlenirken hata: '+e.message, false);
+      channelList.innerHTML = '<span class="empty-text">Veri hatası</span>';
     }
   }, function(err){
     addDebugLog('İçerik hatası: '+err);
     hideOverlay();
-    showError('İçerikler alınamadı: '+err);
+    setStatus('İçerikler alınamadı: '+err, false);
+    channelList.innerHTML = '<span class="empty-text">Bağlantı hatası</span>';
   }, 60000);
 }
 
@@ -1153,8 +1200,28 @@ function selectCategory(categoryId){
 
   xhrGet('GET', proxyUrl, function(text){
     try{
+      if(!text || text.trim()===''){
+        addDebugLog('⚠️ Boş içerik yanıtı');
+        hideOverlay();
+        setStatus('İçerik bulunamadı', false);
+        channelList.innerHTML = '<span class="empty-text">İçerik yok</span>';
+        return;
+      }
+      
       var data = JSON.parse(text);
-      var items = Array.isArray(data) ? data : [];
+      var items = [];
+      if(Array.isArray(data)){
+        items = data;
+      }else if(data && data.live){
+        items = data.live;
+      }else if(data && data.movies){
+        items = data.movies;
+      }else if(data && data.vod){
+        items = data.vod;
+      }else if(data && data.series){
+        items = data.series;
+      }
+      
       allItems = items || [];
       addDebugLog(allItems.length+' içerik bulundu');
       currentPage = 0;
@@ -1172,12 +1239,12 @@ function selectCategory(categoryId){
     }catch(e){
       addDebugLog('İçerik parse hatası: '+e.message);
       hideOverlay();
-      showError('Veri işlenirken hata: '+e.message);
+      setStatus('Veri işlenirken hata: '+e.message, false);
     }
   }, function(err){
     addDebugLog('İçerik hatası: '+err);
     hideOverlay();
-    showError('İçerikler alınamadı: '+err);
+    setStatus('İçerikler alınamadı: '+err, false);
   }, 60000);
 }
 
@@ -1329,6 +1396,12 @@ function loadSeriesSeasons(series){
 
   xhrGet('GET', proxyUrl, function(text){
     try{
+      if(!text || text.trim()===''){
+        addDebugLog('⚠️ Boş sezon yanıtı');
+        hideOverlay();
+        setStatus('Sezon bilgisi bulunamadı', false);
+        return;
+      }
       var data = JSON.parse(text);
       if(data && data.episodes){
         seriesDataCache[seriesId] = data;
@@ -1336,17 +1409,17 @@ function loadSeriesSeasons(series){
       }else{
         addDebugLog('Sezon bilgisi bulunamadı');
         hideOverlay();
-        showError('Bu dizi için sezon bilgisi bulunamadı');
+        setStatus('Bu dizi için sezon bilgisi bulunamadı', false);
       }
     }catch(e){
       addDebugLog('Sezon parse hatası: '+e.message);
       hideOverlay();
-      showError('Sezonlar yüklenirken hata: '+e.message);
+      setStatus('Sezonlar yüklenirken hata: '+e.message, false);
     }
   }, function(err){
     addDebugLog('Sezon hatası: '+err);
     hideOverlay();
-    showError('Sezonlar alınamadı: '+err);
+    setStatus('Sezonlar alınamadı: '+err, false);
   }, 30000);
 }
 
@@ -1441,7 +1514,7 @@ backToSeriesEpBtn.addEventListener('click', function(){
 });
 
 // ============================================================
-// PLAY FUNCTIONS - LG TV OPTİMİZE
+// PLAY FUNCTIONS
 // ============================================================
 function playItem(item){
   if(!item || !currentAccount) return;
@@ -1697,7 +1770,7 @@ function playAccount(acc){
 // ============================================================
 // INIT
 // ============================================================
-addDebugLog('=== IPTV Oynatıcı Başlatıldı (LG TV Optimize) ===');
+addDebugLog('=== IPTV Oynatıcı Başlatıldı (Parse Hatası Düzeltildi) ===');
 addDebugLog('Tarayıcı: '+navigator.userAgent);
 addDebugLog('HLS.js: '+(typeof Hls!=='undefined'?'Yüklendi':'Yüklenemedi'));
 
